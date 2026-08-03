@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# KS Scaffolding
 
-## Getting Started
+Interný portál pre lešenársku firmu KS Scaffolding.
 
-First, run the development server:
+- **Zamestnanci** — prihlásenie, evidencia odpracovaných hodín, stavebný denník
+- **Administrácia** — prehľad chodu firmy, objednávky, faktúry, evidencia práce všetkých zamestnancov
+
+## Tech stack
+
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · Supabase (databáza, auth, RLS)
+
+## Spustenie
+
+1. Vytvor projekt na [supabase.com](https://supabase.com) a skopíruj `.env.local.example` do `.env.local`, doplň kľúče.
+2. V Supabase SQL editore spusti migráciu `supabase/migrations/0001_init.sql`.
+3. Nainštaluj závislosti a spusti dev server:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+4. Otvor [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Prvý užívateľ musí mať v tabuľke `profiles` ručne nastavenú rolu `admin` (predvolená rola pri registrácii je `employee`).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Dátový model
 
-## Learn More
+| Tabuľka | Účel |
+|---|---|
+| `profiles` | zamestnanci, rola (`admin` / `employee`) |
+| `work_hours` | evidencia odpracovaných hodín |
+| `site_diary_entries` | stavebný denník |
+| `orders` | objednávky |
+| `invoices` | faktúry |
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Prístup k dátam je riadený cez Row Level Security — zamestnanec vidí len svoje záznamy, admin vidí a spravuje všetko.
