@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { updateEmployeeRole } from "@/app/admin/employees/actions";
+import { updateEmployeeRole } from "@/app/(app)/admin/employees/actions";
 
 export function RoleSelectForm({
   employeeId,
@@ -22,7 +22,7 @@ export function RoleSelectForm({
         defaultValue={role}
         disabled={disabled}
         onChange={() => formRef.current?.requestSubmit()}
-        className="rounded-md border border-neutral-300 px-2 py-1 text-xs text-neutral-700 disabled:opacity-40"
+        className="rounded-lg border border-ink-200 px-2 py-1 text-xs text-ink-700 disabled:opacity-40"
       >
         <option value="employee">Zamestnanec</option>
         <option value="foreman">Vedúci stavby</option>

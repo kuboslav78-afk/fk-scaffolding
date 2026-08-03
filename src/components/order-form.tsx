@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { createOrder, parseOrderPdfAction } from "@/app/admin/orders/actions";
+import { createOrder, parseOrderPdfAction } from "@/app/(app)/admin/orders/actions";
 
 type Site = { id: string; name: string; project_number: string | null };
 
@@ -77,14 +77,14 @@ export function OrderForm({ sites }: { sites: Site[] }) {
   return (
     <form ref={formRef} action={createOrder} className="space-y-3">
       <div>
-        <label className="text-xs text-neutral-500">Nahrať objednávku (PDF) — auto-vyplní polia</label>
+        <label className="label">Nahrať objednávku (PDF) — auto-vyplní polia</label>
         <input
           type="file"
           accept="application/pdf"
           onChange={handlePdfChange}
           className="block w-full text-sm"
         />
-        {isPending && <p className="text-xs text-neutral-500">Načítavam z PDF…</p>}
+        {isPending && <p className="label">Načítavam z PDF…</p>}
         {parseError && <p className="text-xs text-red-600">{parseError}</p>}
       </div>
 
@@ -95,13 +95,13 @@ export function OrderForm({ sites }: { sites: Site[] }) {
           placeholder="Číslo objednávky"
           value={orderNumber}
           onChange={(e) => setOrderNumber(e.target.value)}
-          className="rounded-md border border-neutral-300 px-3 py-2 text-sm"
+          className="input"
         />
         <select
           name="work_type"
           value={workType}
           onChange={(e) => setWorkType(e.target.value)}
-          className="rounded-md border border-neutral-300 px-3 py-2 text-sm"
+          className="input"
         >
           <option value="">Typ práce</option>
           <option value="montaz">Montáž</option>
@@ -116,7 +116,7 @@ export function OrderForm({ sites }: { sites: Site[] }) {
         placeholder="Zákazník (voliteľné pri hodinovke)"
         value={customerName}
         onChange={(e) => setCustomerName(e.target.value)}
-        className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
+        className="input"
       />
 
       {siteId === "" && !newSiteName ? (
@@ -124,7 +124,7 @@ export function OrderForm({ sites }: { sites: Site[] }) {
           name="site_id"
           value={siteId}
           onChange={(e) => setSiteId(e.target.value)}
-          className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
+          className="input"
         >
           <option value="">Bez stavby</option>
           {sites.map((s) => (
@@ -134,7 +134,7 @@ export function OrderForm({ sites }: { sites: Site[] }) {
           ))}
         </select>
       ) : newSiteName ? (
-        <div className="space-y-1 rounded-md border border-amber-300 bg-amber-50 p-2">
+        <div className="space-y-1 rounded-lg border border-amber-200 bg-amber-50 p-2">
           <p className="text-xs text-amber-900">
             V databáze sa nenašla zodpovedajúca stavba — vytvorí sa nová:
           </p>
@@ -143,7 +143,7 @@ export function OrderForm({ sites }: { sites: Site[] }) {
             name="new_site_name"
             value={newSiteName}
             onChange={(e) => setNewSiteName(e.target.value)}
-            className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm"
+            className="input"
           />
           <input type="hidden" name="project_number" value={projectNumber} />
           <button
@@ -152,7 +152,7 @@ export function OrderForm({ sites }: { sites: Site[] }) {
               setNewSiteName("");
               setSiteId("");
             }}
-            className="text-xs text-neutral-500 underline"
+            className="text-xs text-ink-400 underline hover:text-ink-600"
           >
             radšej vybrať existujúcu stavbu
           </button>
@@ -163,7 +163,7 @@ export function OrderForm({ sites }: { sites: Site[] }) {
             name="site_id"
             value={siteId}
             onChange={(e) => setSiteId(e.target.value)}
-            className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
+            className="input"
           >
             <option value="">Bez stavby</option>
             {sites.map((s) => (
@@ -177,34 +177,34 @@ export function OrderForm({ sites }: { sites: Site[] }) {
 
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <label className="text-xs text-neutral-500">Dátum objednávky</label>
+          <label className="label">Dátum objednávky</label>
           <input
             type="date"
             name="order_date"
             required
             value={orderDate}
             onChange={(e) => setOrderDate(e.target.value)}
-            className="w-full rounded-md border border-neutral-300 px-2 py-2 text-sm"
+            className="input"
           />
         </div>
         <div>
-          <label className="text-xs text-neutral-500">Začiatok</label>
+          <label className="label">Začiatok</label>
           <input
             type="date"
             name="start_date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="w-full rounded-md border border-neutral-300 px-2 py-2 text-sm"
+            className="input"
           />
         </div>
         <div>
-          <label className="text-xs text-neutral-500">Odovzdanie</label>
+          <label className="label">Odovzdanie</label>
           <input
             type="date"
             name="handover_date"
             value={handoverDate}
             onChange={(e) => setHandoverDate(e.target.value)}
-            className="w-full rounded-md border border-neutral-300 px-2 py-2 text-sm"
+            className="input"
           />
         </div>
       </div>
@@ -212,7 +212,7 @@ export function OrderForm({ sites }: { sites: Site[] }) {
       {workType === "hodiny" && (
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs text-neutral-500">Počet hodín</label>
+            <label className="label">Počet hodín</label>
             <input
               type="number"
               step="0.5"
@@ -222,11 +222,11 @@ export function OrderForm({ sites }: { sites: Site[] }) {
                 setHours(e.target.value);
                 recomputeHourlyPrice(e.target.value, hourlyRate);
               }}
-              className="w-full rounded-md border border-neutral-300 px-2 py-2 text-sm"
+              className="input"
             />
           </div>
           <div>
-            <label className="text-xs text-neutral-500">Sadzba (€/hod)</label>
+            <label className="label">Sadzba (€/hod)</label>
             <input
               type="number"
               step="0.01"
@@ -236,7 +236,7 @@ export function OrderForm({ sites }: { sites: Site[] }) {
                 setHourlyRate(e.target.value);
                 recomputeHourlyPrice(hours, e.target.value);
               }}
-              className="w-full rounded-md border border-neutral-300 px-2 py-2 text-sm"
+              className="input"
             />
           </div>
         </div>
@@ -244,7 +244,7 @@ export function OrderForm({ sites }: { sites: Site[] }) {
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-xs text-neutral-500">
+          <label className="label">
             {workType === "hodiny" ? "Suma spolu (€)" : "Cena objednávky (€)"}
           </label>
           <input
@@ -257,36 +257,36 @@ export function OrderForm({ sites }: { sites: Site[] }) {
               const n = parseFloat(e.target.value);
               setContribution(Number.isFinite(n) ? (n * 0.1).toFixed(2) : "");
             }}
-            className="w-full rounded-md border border-neutral-300 px-2 py-2 text-sm"
+            className="input"
           />
         </div>
         <div>
-          <label className="text-xs text-neutral-500">Príspevok SUKA 10% (€)</label>
+          <label className="label">Príspevok SUKA 10% (€)</label>
           <input
             type="number"
             step="0.01"
             name="contribution_amount"
             value={contribution}
             onChange={(e) => setContribution(e.target.value)}
-            className="w-full rounded-md border border-neutral-300 px-2 py-2 text-sm"
+            className="input"
           />
         </div>
       </div>
 
       {!!parseFloat(price) && workType !== "hodiny" && (
-        <p className="text-xs text-neutral-500">
+        <p className="label">
           Moja faktúra (Peter si necháva 20%): {(parseFloat(price) * 0.8).toFixed(2)} € — vytvor
           ju nižšie po uložení objednávky
         </p>
       )}
       {!!parseFloat(price) && workType === "hodiny" && (
-        <p className="text-xs text-neutral-500">
+        <p className="label">
           Suma na faktúru vieš dole prípadne znížiť o 20% (Peter) — je to individuálne podľa
           dohody
         </p>
       )}
 
-      <label className="flex items-center gap-2 text-sm text-neutral-700">
+      <label className="flex items-center gap-2 text-sm text-ink-700">
         <input type="checkbox" name="peter_invoice_issued" value="true" />
         Peter už vystavil svoju faktúru (splatnosti sedia)
       </label>
@@ -295,19 +295,19 @@ export function OrderForm({ sites }: { sites: Site[] }) {
         name="description"
         placeholder="Popis práce (voliteľné)"
         rows={2}
-        className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
+        className="input"
       />
 
       <textarea
         name="note"
         placeholder="Poznámka"
         rows={2}
-        className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
+        className="input"
       />
 
       <button
         type="submit"
-        className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800"
+        className="btn-primary"
       >
         Vytvoriť objednávku
       </button>

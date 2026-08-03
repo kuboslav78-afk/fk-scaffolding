@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { deleteOrder } from "@/app/admin/orders/actions";
+import { deleteOrder } from "@/app/(app)/admin/orders/actions";
 
 export function DeleteOrderButton({ orderId }: { orderId: string }) {
   const [isPending, startTransition] = useTransition();
@@ -18,7 +18,7 @@ export function DeleteOrderButton({ orderId }: { orderId: string }) {
       type="button"
       onClick={handleClick}
       disabled={isPending}
-      className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-40"
+      className="btn-danger btn-sm"
     >
       {isPending ? "Mažem…" : "Odstrániť"}
     </button>

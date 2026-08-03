@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createInvoice } from "@/app/admin/orders/actions";
+import { createInvoice } from "@/app/(app)/admin/orders/actions";
 
 type Order = {
   id: string;
@@ -42,7 +42,7 @@ export function InvoiceForm({ orders }: { orders: Order[] }) {
         required
         defaultValue=""
         onChange={handleOrderChange}
-        className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
+        className="input"
       >
         <option value="" disabled>
           Vyber objednávku
@@ -59,7 +59,7 @@ export function InvoiceForm({ orders }: { orders: Order[] }) {
           name="invoice_number"
           placeholder="Číslo faktúry"
           required
-          className="rounded-md border border-neutral-300 px-3 py-2 text-sm"
+          className="input"
         />
         <div>
           <input
@@ -70,10 +70,10 @@ export function InvoiceForm({ orders }: { orders: Order[] }) {
             required
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
+            className="input"
           />
           {basePrice != null && (
-            <label className="mt-1 flex items-center gap-1.5 text-xs text-neutral-500">
+            <label className="mt-1 flex items-center gap-1.5 text-xs text-ink-500">
               <input
                 type="checkbox"
                 checked={applyPeterCut}
@@ -86,27 +86,27 @@ export function InvoiceForm({ orders }: { orders: Order[] }) {
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-xs text-neutral-500">Dátum vystavenia</label>
+          <label className="label">Dátum vystavenia</label>
           <input
             type="date"
             name="issued_date"
             required
             defaultValue={new Date().toISOString().slice(0, 10)}
-            className="w-full rounded-md border border-neutral-300 px-2 py-2 text-sm"
+            className="input"
           />
         </div>
         <div>
-          <label className="text-xs text-neutral-500">Splatnosť</label>
+          <label className="label">Splatnosť</label>
           <input
             type="date"
             name="due_date"
-            className="w-full rounded-md border border-neutral-300 px-2 py-2 text-sm"
+            className="input"
           />
         </div>
       </div>
       <button
         type="submit"
-        className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800"
+        className="btn-primary"
       >
         Pridať faktúru
       </button>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createEmployee } from "@/app/admin/employees/actions";
+import { createEmployee } from "@/app/(app)/admin/employees/actions";
 
 export function CreateEmployeeForm() {
   const [isPending, startTransition] = useTransition();
@@ -31,29 +31,15 @@ export function CreateEmployeeForm() {
           name="full_name"
           placeholder="Meno a priezvisko"
           required
-          className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
+          className="input"
         />
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          required
-          className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
-        />
-        <select
-          name="role"
-          defaultValue="employee"
-          className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
-        >
+        <input type="email" name="email" placeholder="Email" required className="input" />
+        <select name="role" defaultValue="employee" className="input">
           <option value="employee">Zamestnanec</option>
           <option value="foreman">Vedúci stavby</option>
           <option value="admin">Administrátor</option>
         </select>
-        <button
-          type="submit"
-          disabled={isPending}
-          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
-        >
+        <button type="submit" disabled={isPending} className="btn-primary">
           {isPending ? "Vytváram…" : "Vytvoriť účet"}
         </button>
       </form>
@@ -61,7 +47,7 @@ export function CreateEmployeeForm() {
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       {created && (
-        <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
           <p className="font-medium">Účet vytvorený — odovzdaj tieto údaje zamestnancovi:</p>
           <p>
             Email: <span className="font-mono">{created.email}</span>
