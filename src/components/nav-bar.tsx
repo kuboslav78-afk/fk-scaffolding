@@ -31,6 +31,9 @@ export function NavBar({
                 <Link href="/admin/sites" className="text-neutral-600 hover:text-neutral-900">
                   Stavby
                 </Link>
+                <Link href="/admin/orders" className="text-neutral-600 hover:text-neutral-900">
+                  Objednávky
+                </Link>
               </>
             )}
           </nav>
