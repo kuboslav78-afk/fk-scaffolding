@@ -21,6 +21,18 @@ export function OrderForm({ sites }: { sites: Site[] }) {
   const [handoverDate, setHandoverDate] = useState("");
   const [price, setPrice] = useState("");
   const [contribution, setContribution] = useState("");
+  const [hours, setHours] = useState("");
+  const [hourlyRate, setHourlyRate] = useState("");
+
+  function recomputeHourlyPrice(nextHours: string, nextRate: string) {
+    const h = parseFloat(nextHours);
+    const r = parseFloat(nextRate);
+    if (Number.isFinite(h) && Number.isFinite(r)) {
+      const p = h * r;
+      setPrice(p.toFixed(2));
+      setContribution((p * 0.1).toFixed(2));
+    }
+  }
 
   function handlePdfChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -94,14 +106,14 @@ export function OrderForm({ sites }: { sites: Site[] }) {
           <option value="">Typ práce</option>
           <option value="montaz">Montáž</option>
           <option value="demontaz">Demontáž</option>
+          <option value="hodiny">Hodinovka (naviac hodiny)</option>
         </select>
       </div>
 
       <input
         type="text"
         name="customer_name"
-        placeholder="Zákazník"
-        required
+        placeholder="Zákazník (voliteľné pri hodinovke)"
         value={customerName}
         onChange={(e) => setCustomerName(e.target.value)}
         className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
@@ -197,9 +209,44 @@ export function OrderForm({ sites }: { sites: Site[] }) {
         </div>
       </div>
 
+      {workType === "hodiny" && (
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs text-neutral-500">Počet hodín</label>
+            <input
+              type="number"
+              step="0.5"
+              name="hours"
+              value={hours}
+              onChange={(e) => {
+                setHours(e.target.value);
+                recomputeHourlyPrice(e.target.value, hourlyRate);
+              }}
+              className="w-full rounded-md border border-neutral-300 px-2 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-neutral-500">Sadzba (€/hod)</label>
+            <input
+              type="number"
+              step="0.01"
+              name="hourly_rate"
+              value={hourlyRate}
+              onChange={(e) => {
+                setHourlyRate(e.target.value);
+                recomputeHourlyPrice(hours, e.target.value);
+              }}
+              className="w-full rounded-md border border-neutral-300 px-2 py-2 text-sm"
+            />
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-xs text-neutral-500">Cena objednávky (€)</label>
+          <label className="text-xs text-neutral-500">
+            {workType === "hodiny" ? "Suma spolu (€)" : "Cena objednávky (€)"}
+          </label>
           <input
             type="number"
             step="0.01"
@@ -226,10 +273,16 @@ export function OrderForm({ sites }: { sites: Site[] }) {
         </div>
       </div>
 
-      {!!parseFloat(price) && (
+      {!!parseFloat(price) && workType !== "hodiny" && (
         <p className="text-xs text-neutral-500">
           Moja faktúra (Peter si necháva 20%): {(parseFloat(price) * 0.8).toFixed(2)} € — vytvor
           ju nižšie po uložení objednávky
+        </p>
+      )}
+      {!!parseFloat(price) && workType === "hodiny" && (
+        <p className="text-xs text-neutral-500">
+          Suma na faktúru vieš dole prípadne znížiť o 20% (Peter) — je to individuálne podľa
+          dohody
         </p>
       )}
 

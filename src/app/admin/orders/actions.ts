@@ -47,7 +47,7 @@ export async function createOrder(formData: FormData) {
 
   await supabase.from("orders").insert({
     order_number: formData.get("order_number") || null,
-    customer_name: formData.get("customer_name"),
+    customer_name: formData.get("customer_name") || null,
     site_id: siteId || null,
     work_type: formData.get("work_type") || null,
     order_date: formData.get("order_date"),
@@ -55,6 +55,8 @@ export async function createOrder(formData: FormData) {
     handover_date: formData.get("handover_date") || null,
     price: formData.get("price") || null,
     contribution_amount: formData.get("contribution_amount") || null,
+    hours: formData.get("hours") || null,
+    hourly_rate: formData.get("hourly_rate") || null,
     peter_invoice_issued: formData.get("peter_invoice_issued") === "true",
     description: formData.get("description") || null,
     note: formData.get("note") || null,

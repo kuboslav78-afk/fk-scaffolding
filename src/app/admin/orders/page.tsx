@@ -9,6 +9,7 @@ import { toggleInvoiceFlag, togglePeterInvoiceIssued } from "./actions";
 const WORK_TYPE_LABELS: Record<string, string> = {
   montaz: "Montáž",
   demontaz: "Demontáž",
+  hodiny: "Hodinovka",
 };
 
 export default async function OrdersPage() {
@@ -23,7 +24,7 @@ export default async function OrdersPage() {
     supabase
       .from("orders")
       .select(
-        "id, order_number, customer_name, work_type, order_date, start_date, handover_date, price, contribution_amount, peter_invoice_issued, note, sites(name)"
+        "id, order_number, customer_name, work_type, order_date, start_date, handover_date, price, contribution_amount, hours, hourly_rate, peter_invoice_issued, note, sites(name)"
       )
       .order("order_date", { ascending: false })
       .limit(30),
@@ -56,7 +57,7 @@ export default async function OrdersPage() {
                 <li key={o.id} className="space-y-1 py-3">
                   <div className="flex justify-between">
                     <span className="font-medium text-neutral-900">
-                      {o.order_number ?? "—"} · {o.customer_name}
+                      {o.order_number ?? "—"} · {o.customer_name ?? "bez zákazníka"}
                     </span>
                     <span className="text-neutral-500">{o.price ? `${o.price} €` : ""}</span>
                   </div>
@@ -64,9 +65,12 @@ export default async function OrdersPage() {
                     {/* @ts-expect-error supabase join shape */}
                     {o.sites?.name ?? "bez stavby"}
                     {o.work_type ? ` · ${WORK_TYPE_LABELS[o.work_type]}` : ""}
+                    {o.work_type === "hodiny" && o.hours != null
+                      ? ` · ${o.hours} h × ${o.hourly_rate} €`
+                      : ""}
                     {o.start_date ? ` · ${o.start_date} → ${o.handover_date ?? "?"}` : ""}
                   </p>
-                  {o.price != null && (
+                  {o.price != null && o.work_type !== "hodiny" && (
                     <p className="text-xs text-neutral-400">
                       moja faktúra (80 %): {(o.price * 0.8).toFixed(2)} € · SUKA:{" "}
                       {o.contribution_amount ?? (o.price * 0.1).toFixed(2)} €
