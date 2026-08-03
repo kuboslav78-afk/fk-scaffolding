@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { ScaffoldDecoration } from "@/components/scaffold-decoration";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -30,45 +31,47 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-neutral-100 px-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-ink-50 px-4">
+      <ScaffoldDecoration side="left" />
+      <ScaffoldDecoration side="right" />
+
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-sm space-y-4 rounded-lg bg-white p-8 shadow"
+        className="relative z-10 w-full max-w-sm space-y-5 rounded-2xl border border-ink-100 bg-white p-8 shadow-[0_8px_30px_rgba(23,21,15,0.08)]"
       >
-        <div>
-          <h1 className="text-xl font-semibold text-neutral-900">FK Scaffolding</h1>
-          <p className="text-sm text-neutral-500">Prihlásenie zamestnanca</p>
+        <div className="space-y-1 text-center">
+          <span className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-sm font-bold text-white">
+            FK
+          </span>
+          <h1 className="text-xl font-semibold text-ink-900">FK Scaffolding</h1>
+          <p className="text-sm text-ink-500">Prihlásenie zamestnanca</p>
         </div>
 
         <div className="space-y-1">
-          <label className="text-sm font-medium text-neutral-700">Email</label>
+          <label className="label">Email</label>
           <input
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-500 focus:outline-none"
+            className="input"
           />
         </div>
 
         <div className="space-y-1">
-          <label className="text-sm font-medium text-neutral-700">Heslo</label>
+          <label className="label">Heslo</label>
           <input
             type="password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-500 focus:outline-none"
+            className="input"
           />
         </div>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
-        >
+        <button type="submit" disabled={loading} className="btn-primary w-full">
           {loading ? "Prihlasujem…" : "Prihlásiť sa"}
         </button>
       </form>

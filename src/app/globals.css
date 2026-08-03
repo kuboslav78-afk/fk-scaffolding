@@ -63,6 +63,35 @@ body {
   color: var(--foreground);
 }
 
+@keyframes scaffold-sway-left {
+  0%,
+  100% {
+    transform: perspective(900px) rotateY(10deg) rotateX(2deg) translateY(0px);
+  }
+  50% {
+    transform: perspective(900px) rotateY(16deg) rotateX(-1deg) translateY(-10px);
+  }
+}
+
+@keyframes scaffold-sway-right {
+  0%,
+  100% {
+    transform: perspective(900px) rotateY(-10deg) rotateX(2deg) translateY(-8px);
+  }
+  50% {
+    transform: perspective(900px) rotateY(-16deg) rotateX(-1deg) translateY(2px);
+  }
+}
+
+.animate-scaffold-left {
+  animation: scaffold-sway-left 9s ease-in-out infinite;
+  transform-style: preserve-3d;
+}
+.animate-scaffold-right {
+  animation: scaffold-sway-right 10.5s ease-in-out infinite;
+  transform-style: preserve-3d;
+}
+
 @layer components {
   .card {
     @apply rounded-xl border border-ink-100 bg-white shadow-[0_1px_2px_rgba(23,21,15,0.04)];
