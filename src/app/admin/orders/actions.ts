@@ -106,3 +106,13 @@ export async function togglePeterInvoiceIssued(orderId: string, value: boolean) 
 
   revalidatePath("/admin/orders");
 }
+
+export async function deleteOrder(orderId: string) {
+  const requester = await getProfile();
+  if (requester?.role !== "admin") return;
+
+  const supabase = await createClient();
+  await supabase.from("orders").delete().eq("id", orderId);
+
+  revalidatePath("/admin/orders");
+}

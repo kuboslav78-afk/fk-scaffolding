@@ -4,6 +4,7 @@ import { getProfile } from "@/lib/get-profile";
 import { NavBar } from "@/components/nav-bar";
 import { OrderForm } from "@/components/order-form";
 import { InvoiceForm } from "@/components/invoice-form";
+import { DeleteOrderButton } from "@/components/delete-order-button";
 import { toggleInvoiceFlag, togglePeterInvoiceIssued } from "./actions";
 
 const WORK_TYPE_LABELS: Record<string, string> = {
@@ -77,18 +78,21 @@ export default async function OrdersPage() {
                     </p>
                   )}
                   {o.note && <p className="text-xs text-neutral-400">{o.note}</p>}
-                  <form action={togglePeterInvoiceIssued.bind(null, o.id, !o.peter_invoice_issued)}>
-                    <button
-                      type="submit"
-                      className={
-                        o.peter_invoice_issued
-                          ? "rounded-md bg-green-100 px-2 py-1 text-xs text-green-700"
-                          : "rounded-md border border-neutral-300 px-2 py-1 text-xs text-neutral-600"
-                      }
-                    >
-                      {o.peter_invoice_issued ? "Peter fakturoval ✓" : "označiť: Peter fakturoval"}
-                    </button>
-                  </form>
+                  <div className="flex gap-2">
+                    <form action={togglePeterInvoiceIssued.bind(null, o.id, !o.peter_invoice_issued)}>
+                      <button
+                        type="submit"
+                        className={
+                          o.peter_invoice_issued
+                            ? "rounded-md bg-green-100 px-2 py-1 text-xs text-green-700"
+                            : "rounded-md border border-neutral-300 px-2 py-1 text-xs text-neutral-600"
+                        }
+                      >
+                        {o.peter_invoice_issued ? "Peter fakturoval ✓" : "označiť: Peter fakturoval"}
+                      </button>
+                    </form>
+                    <DeleteOrderButton orderId={o.id} />
+                  </div>
                 </li>
               ))}
               {!orders?.length && (
