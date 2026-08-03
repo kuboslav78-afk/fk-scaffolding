@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "KS Scaffolding",
-  description: "Portál pre zamestnancov a administráciu KS Scaffolding",
+  title: "FK Scaffolding",
+  description: "Portál pre zamestnancov a administráciu FK Scaffolding s. r. o.",
 };
 
 export default function RootLayout({

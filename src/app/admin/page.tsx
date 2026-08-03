@@ -14,7 +14,7 @@ export default async function AdminPage() {
   const [{ data: orders }, { data: invoices }, { data: recentHours }] = await Promise.all([
     supabase.from("orders").select("id, customer_name, site_name, order_date, status").order("order_date", { ascending: false }).limit(10),
     supabase.from("invoices").select("id, invoice_number, customer_name, amount, issued_date, paid").order("issued_date", { ascending: false }).limit(10),
-    supabase.from("work_hours").select("id, work_date, hours_worked, site_name, profiles(full_name)").order("work_date", { ascending: false }).limit(10),
+    supabase.from("work_hours").select("id, work_date, hours_worked, approved, sites(name), profiles!employee_id(full_name)").order("work_date", { ascending: false }).limit(10),
   ]);
 
   return (
@@ -32,9 +32,16 @@ export default async function AdminPage() {
                 <span className="text-neutral-600">
                   {h.work_date} ·{" "}
                   {/* @ts-expect-error supabase join shape */}
-                  {h.profiles?.full_name ?? "—"} {h.site_name ? `· ${h.site_name}` : ""}
+                  {h.profiles?.full_name ?? "—"} ·{" "}
+                  {/* @ts-expect-error supabase join shape */}
+                  {h.sites?.name ?? "—"}
                 </span>
-                <span className="font-medium text-neutral-900">{h.hours_worked} h</span>
+                <span className="flex items-center gap-2">
+                  <span className="font-medium text-neutral-900">{h.hours_worked} h</span>
+                  <span className={h.approved ? "text-xs text-green-600" : "text-xs text-amber-600"}>
+                    {h.approved ? "schválené" : "čaká"}
+                  </span>
+                </span>
               </li>
             ))}
             {!recentHours?.length && (

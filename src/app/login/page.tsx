@@ -36,7 +36,7 @@ export default function LoginPage() {
         className="w-full max-w-sm space-y-4 rounded-lg bg-white p-8 shadow"
       >
         <div>
-          <h1 className="text-xl font-semibold text-neutral-900">KS Scaffolding</h1>
+          <h1 className="text-xl font-semibold text-neutral-900">FK Scaffolding</h1>
           <p className="text-sm text-neutral-500">Prihlásenie zamestnanca</p>
         </div>
 
