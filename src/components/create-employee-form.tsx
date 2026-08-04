@@ -44,10 +44,10 @@ export function CreateEmployeeForm() {
         </button>
       </form>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-400">{error}</p>}
 
       {created && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+        <div className="rounded-lg border border-amber-900/40 bg-amber-500/10 p-3 text-sm text-amber-300">
           <p className="font-medium">Účet vytvorený — odovzdaj tieto údaje zamestnancovi:</p>
           <p>
             Email: <span className="font-mono">{created.email}</span>

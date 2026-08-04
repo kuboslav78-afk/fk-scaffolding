@@ -52,17 +52,40 @@ export default async function AdminPage() {
       <h1 className="text-2xl font-semibold text-ink-900">Administrácia</h1>
 
       <section className="grid gap-4 sm:grid-cols-3">
-        <div className="card p-4">
-          <p className="text-xs font-medium text-ink-400">Nezaplatené faktúry</p>
-          <p className="mt-1 text-2xl font-semibold text-ink-900">{unpaidTotal.toFixed(2)} €</p>
+        <div className="card flex items-start justify-between p-4 transition-shadow duration-150 hover:shadow-[0_4px_16px_rgba(23,21,15,0.08)]">
+          <div>
+            <p className="text-xs font-medium text-ink-400">Nezaplatené faktúry</p>
+            <p className="mt-1 text-2xl font-semibold text-ink-900">{unpaidTotal.toFixed(2)} €</p>
+          </div>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-500/15 text-red-400">
+            <svg viewBox="0 0 20 20" fill="none" className="h-4.5 w-4.5">
+              <path d="M6 7h8M6 10h5M4 4h12a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
         </div>
-        <div className="card p-4">
-          <p className="text-xs font-medium text-ink-400">Hodiny tento mesiac</p>
-          <p className="mt-1 text-2xl font-semibold text-ink-900">{monthHoursTotal} h</p>
+        <div className="card flex items-start justify-between p-4 transition-shadow duration-150 hover:shadow-[0_4px_16px_rgba(23,21,15,0.08)]">
+          <div>
+            <p className="text-xs font-medium text-ink-400">Hodiny tento mesiac</p>
+            <p className="mt-1 text-2xl font-semibold text-ink-900">{monthHoursTotal} h</p>
+          </div>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-500/15 text-brand-400">
+            <svg viewBox="0 0 20 20" fill="none" className="h-4.5 w-4.5">
+              <circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.6" />
+              <path d="M10 6v4l2.5 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
         </div>
-        <div className="card p-4">
-          <p className="text-xs font-medium text-ink-400">Objednávky bez faktúry</p>
-          <p className="mt-1 text-2xl font-semibold text-ink-900">{openOrders.length}</p>
+        <div className="card flex items-start justify-between p-4 transition-shadow duration-150 hover:shadow-[0_4px_16px_rgba(23,21,15,0.08)]">
+          <div>
+            <p className="text-xs font-medium text-ink-400">Objednávky bez faktúry</p>
+            <p className="mt-1 text-2xl font-semibold text-ink-900">{openOrders.length}</p>
+          </div>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-400">
+            <svg viewBox="0 0 20 20" fill="none" className="h-4.5 w-4.5">
+              <rect x="4.5" y="3.5" width="11" height="14" rx="1.2" stroke="currentColor" strokeWidth="1.6" />
+              <path d="M7 8h6M7 11h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          </span>
         </div>
       </section>
 
@@ -79,7 +102,7 @@ export default async function AdminPage() {
                     {/* @ts-expect-error supabase join shape */}
                     {i.orders?.order_number ?? "—"} · {i.orders?.customer_name ?? "—"}
                     {i.due_date && (
-                      <span className={overdue ? "ml-1 text-red-600" : "ml-1 text-ink-400"}>
+                      <span className={overdue ? "ml-1 text-red-400" : "ml-1 text-ink-400"}>
                         (splatnosť {i.due_date}
                         {overdue ? " — po splatnosti" : ""})
                       </span>

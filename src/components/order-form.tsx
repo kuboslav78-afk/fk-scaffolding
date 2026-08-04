@@ -85,7 +85,7 @@ export function OrderForm({ sites }: { sites: Site[] }) {
           className="block w-full text-sm"
         />
         {isPending && <p className="label">Načítavam z PDF…</p>}
-        {parseError && <p className="text-xs text-red-600">{parseError}</p>}
+        {parseError && <p className="text-xs text-red-400">{parseError}</p>}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -134,8 +134,8 @@ export function OrderForm({ sites }: { sites: Site[] }) {
           ))}
         </select>
       ) : newSiteName ? (
-        <div className="space-y-1 rounded-lg border border-amber-200 bg-amber-50 p-2">
-          <p className="text-xs text-amber-900">
+        <div className="space-y-1 rounded-lg border border-amber-900/40 bg-amber-500/10 p-2">
+          <p className="text-xs text-amber-300">
             V databáze sa nenašla zodpovedajúca stavba — vytvorí sa nová:
           </p>
           <input

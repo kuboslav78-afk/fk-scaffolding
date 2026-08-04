@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f7f5;
-  --foreground: #1c1a17;
+  /* "Nočná zmena" — appka beží natrvalo v tmavej téme, žiadny light/dark prepínač */
+  --background: #0a0908;
+  --foreground: #f2ede2;
 
   --color-brand-50: #fef8ee;
   --color-brand-100: #fdedd2;
@@ -15,17 +16,18 @@
   --color-brand-800: #913c12;
   --color-brand-900: #763312;
 
-  --color-ink-50: #f6f6f5;
-  --color-ink-100: #e7e6e3;
-  --color-ink-200: #d1cfc9;
-  --color-ink-300: #aeaba2;
-  --color-ink-400: #86827a;
-  --color-ink-500: #6b675f;
-  --color-ink-600: #57534c;
-  --color-ink-700: #47443e;
-  --color-ink-800: #3a3733;
-  --color-ink-900: #26241f;
-  --color-ink-950: #17150f;
+  /* ink škála obrátená oproti pôvodnej svetlej téme: 50 = najbližšie k pozadiu, 950 = takmer biely text */
+  --color-ink-50: #16140f;
+  --color-ink-100: #211e19;
+  --color-ink-200: #332f28;
+  --color-ink-300: #453f36;
+  --color-ink-400: #5c574d;
+  --color-ink-500: #797365;
+  --color-ink-600: #9a9186;
+  --color-ink-700: #b7ad9e;
+  --color-ink-800: #cfc7b8;
+  --color-ink-900: #e3ddd0;
+  --color-ink-950: #f2ede2;
 }
 
 @theme inline {
@@ -123,45 +125,45 @@ body {
 
 @layer components {
   .card {
-    @apply rounded-xl border border-ink-100 bg-white shadow-[0_1px_2px_rgba(23,21,15,0.04)];
+    @apply rounded-xl border border-ink-100 bg-[#1c1a17] shadow-[0_1px_2px_rgba(0,0,0,0.3)];
   }
 
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-br from-brand-400 to-brand-600 px-3.5 py-2 text-sm font-semibold text-[#241a06] transition-all duration-150 hover:shadow-[0_0_20px_-6px_rgba(240,162,58,0.7)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-ink-200 bg-white px-3.5 py-2 text-sm font-medium text-ink-700 transition-colors hover:bg-ink-50 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-ink-200 bg-ink-50 px-3.5 py-2 text-sm font-medium text-ink-700 transition-all duration-150 hover:bg-ink-100 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
   }
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium text-ink-500 transition-colors hover:bg-ink-50 hover:text-ink-900 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium text-ink-500 transition-all duration-150 hover:bg-ink-100 hover:text-ink-900 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
   }
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-200 px-3.5 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-900/60 px-3.5 py-2 text-sm font-medium text-red-400 transition-all duration-150 hover:bg-red-950/40 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
   }
   .btn-sm {
     @apply px-2.5 py-1 text-xs;
   }
 
   .input {
-    @apply w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20;
+    @apply w-full rounded-lg border border-ink-200 bg-[#141210] px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20;
   }
   .label {
-    @apply mb-1 block text-xs font-medium text-ink-500;
+    @apply mb-1 block text-xs font-medium text-ink-600;
   }
 
   .badge {
     @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
   }
   .badge-success {
-    @apply inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700;
+    @apply inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-400 transition-transform duration-150 active:scale-[0.96];
   }
   .badge-warning {
-    @apply inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700;
+    @apply inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-400 transition-transform duration-150 active:scale-[0.96];
   }
   .badge-danger {
-    @apply inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700;
+    @apply inline-flex items-center rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-medium text-red-400 transition-transform duration-150 active:scale-[0.96];
   }
   .badge-neutral {
-    @apply inline-flex items-center rounded-full bg-ink-100 px-2 py-0.5 text-xs font-medium text-ink-600;
+    @apply inline-flex items-center rounded-full bg-ink-100 px-2 py-0.5 text-xs font-medium text-ink-600 transition-all duration-150 hover:bg-ink-200 active:scale-[0.96];
   }
 }

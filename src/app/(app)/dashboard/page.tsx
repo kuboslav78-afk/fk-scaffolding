@@ -97,11 +97,11 @@ export default async function DashboardPage() {
       <h1 className="text-2xl font-semibold text-ink-900">Vitaj, {profile.full_name}</h1>
 
       {isForemanSomewhere && (
-        <section className="card border-amber-200 bg-amber-50/60 p-5">
+        <section className="card border-amber-900/40 bg-amber-500/10 p-5">
           <h2 className="mb-4 font-semibold text-ink-900">
             Na schválenie ({foremanSites!.map((s) => s.name).join(", ")})
           </h2>
-          <ul className="divide-y divide-amber-200/70 text-sm">
+          <ul className="divide-y divide-amber-900/40 text-sm">
             {pendingApprovals.map((h) => (
               <li key={h.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
                 <span className="text-ink-700">
