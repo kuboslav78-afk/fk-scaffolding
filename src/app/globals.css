@@ -66,30 +66,59 @@ body {
 @keyframes scaffold-sway-left {
   0%,
   100% {
-    transform: perspective(900px) rotateY(10deg) rotateX(2deg) translateY(0px);
+    transform: perspective(1100px) rotateY(12deg) rotateX(3deg) translateY(0px) translateZ(0px);
   }
   50% {
-    transform: perspective(900px) rotateY(16deg) rotateX(-1deg) translateY(-10px);
+    transform: perspective(1100px) rotateY(21deg) rotateX(-2deg) translateY(-18px) translateZ(30px);
   }
 }
 
 @keyframes scaffold-sway-right {
   0%,
   100% {
-    transform: perspective(900px) rotateY(-10deg) rotateX(2deg) translateY(-8px);
+    transform: perspective(1100px) rotateY(-12deg) rotateX(3deg) translateY(-12px) translateZ(0px);
   }
   50% {
-    transform: perspective(900px) rotateY(-16deg) rotateX(-1deg) translateY(2px);
+    transform: perspective(1100px) rotateY(-21deg) rotateX(-2deg) translateY(6px) translateZ(30px);
   }
 }
 
 .animate-scaffold-left {
-  animation: scaffold-sway-left 9s ease-in-out infinite;
+  animation: scaffold-sway-left 8.5s ease-in-out infinite;
   transform-style: preserve-3d;
 }
 .animate-scaffold-right {
-  animation: scaffold-sway-right 10.5s ease-in-out infinite;
+  animation: scaffold-sway-right 10s ease-in-out infinite;
   transform-style: preserve-3d;
+}
+
+@keyframes beacon-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    r: 4;
+  }
+  50% {
+    opacity: 1;
+    r: 6.5;
+  }
+}
+.animate-beacon-pulse {
+  animation: beacon-pulse 2.1s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes trail-run {
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+.animate-trail-a {
+  animation: trail-run 6s linear infinite;
+}
+.animate-trail-b {
+  animation: trail-run 6s linear infinite;
+  animation-delay: -3s;
 }
 
 @layer components {
