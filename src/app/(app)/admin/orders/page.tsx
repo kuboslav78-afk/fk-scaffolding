@@ -1,134 +1,146 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/get-profile";
-import { OrderForm } from "@/components/order-form";
-import { InvoiceForm } from "@/components/invoice-form";
-import { DeleteOrderButton } from "@/components/delete-order-button";
-import { toggleInvoiceFlag, togglePeterInvoiceIssued } from "./actions";
+import { EditableOrderRow } from "@/components/editable-order-row";
+import { OrdersSubnav } from "@/components/orders-subnav";
 
-const WORK_TYPE_LABELS: Record<string, string> = {
-  montaz: "Montáž",
-  demontaz: "Demontáž",
-  hodiny: "Hodinovka",
-};
+const MONTH_NAMES = [
+  "Január",
+  "Február",
+  "Marec",
+  "Apríl",
+  "Máj",
+  "Jún",
+  "Júl",
+  "August",
+  "September",
+  "Október",
+  "November",
+  "December",
+];
 
-export default async function OrdersPage() {
+function parseMonthParam(month: string | undefined): { year: number; monthIndex: number } {
+  if (month && /^\d{4}-\d{2}$/.test(month)) {
+    const [y, m] = month.split("-").map(Number);
+    return { year: y, monthIndex: m - 1 };
+  }
+  const now = new Date();
+  return { year: now.getFullYear(), monthIndex: now.getMonth() };
+}
+
+function monthParamString(year: number, monthIndex: number) {
+  return `${year}-${String(monthIndex + 1).padStart(2, "0")}`;
+}
+
+export default async function OrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
   const profile = await getProfile();
   if (!profile) redirect("/login");
   if (profile.role !== "admin") redirect("/dashboard");
 
+  const { month } = await searchParams;
+  const { year, monthIndex } = parseMonthParam(month);
+
+  const rangeStart = `${year}-${String(monthIndex + 1).padStart(2, "0")}-01`;
+  const nextMonthDate = new Date(year, monthIndex + 1, 1);
+  const rangeEnd = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, "0")}-01`;
+
+  const prevMonthDate = new Date(year, monthIndex - 1, 1);
+  const prevParam = monthParamString(prevMonthDate.getFullYear(), prevMonthDate.getMonth());
+  const nextParam = monthParamString(nextMonthDate.getFullYear(), nextMonthDate.getMonth());
+
   const supabase = await createClient();
 
-  const [{ data: sites }, { data: orders }, { data: invoices }] = await Promise.all([
+  const [{ data: sites }, { data: monthOrders }] = await Promise.all([
     supabase.from("sites").select("id, name, project_number").order("name"),
     supabase
       .from("orders")
       .select(
-        "id, order_number, customer_name, work_type, order_date, start_date, handover_date, price, contribution_amount, hours, hourly_rate, peter_invoice_issued, note, sites(name)"
+        "id, order_number, customer_name, work_type, order_date, start_date, handover_date, price, contribution_amount, hours, hourly_rate, peter_invoice_issued, peter_invoice_date, note, site_id, sites(name)"
       )
-      .order("order_date", { ascending: false })
-      .limit(30),
-    supabase
-      .from("invoices")
-      .select(
-        "id, invoice_number, amount, issued_date, due_date, sent, paid, orders(order_number, customer_name)"
-      )
-      .order("issued_date", { ascending: false })
-      .limit(30),
+      .gte("order_date", rangeStart)
+      .lt("order_date", rangeEnd)
+      .order("order_date", { ascending: false }),
   ]);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 md:px-8 md:py-8">
-      <h1 className="text-2xl font-semibold text-ink-900">Objednávky</h1>
+    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 md:px-8 md:py-8">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold text-ink-900">Objednávky</h1>
+        <Link href="/admin/orders/new" className="btn-primary">
+          + Nová objednávka
+        </Link>
+      </div>
 
-      <section className="grid gap-6 md:grid-cols-2">
-        <div className="card p-5">
-          <h2 className="mb-4 font-semibold text-ink-900">Nová objednávka</h2>
-          <OrderForm sites={sites ?? []} />
+      <OrdersSubnav active="orders" />
+
+      <div className="flex items-center justify-between">
+        <h2 className="font-semibold text-ink-900">
+          {MONTH_NAMES[monthIndex]} {year}
+        </h2>
+        <div className="flex items-center gap-1">
+          <Link href={`/admin/orders?month=${prevParam}`} className="btn-ghost btn-sm px-2">
+            ←
+          </Link>
+          <Link href="/admin/orders" className="btn-ghost btn-sm">
+            dnes
+          </Link>
+          <Link href={`/admin/orders?month=${nextParam}`} className="btn-ghost btn-sm px-2">
+            →
+          </Link>
         </div>
+      </div>
 
-        <div className="card p-5">
-          <h2 className="mb-4 font-semibold text-ink-900">Existujúce objednávky</h2>
-          <ul className="divide-y divide-ink-100 text-sm">
-            {orders?.map((o) => (
-              <li key={o.id} className="space-y-1.5 py-3">
-                <div className="flex justify-between">
-                  <span className="font-medium text-ink-900">
-                    {o.order_number ?? "—"} · {o.customer_name ?? "bez zákazníka"}
-                  </span>
-                  <span className="text-ink-500">{o.price ? `${o.price} €` : ""}</span>
-                </div>
-                <p className="text-ink-500">
-                  {/* @ts-expect-error supabase join shape */}
-                  {o.sites?.name ?? "bez stavby"}
-                  {o.work_type ? ` · ${WORK_TYPE_LABELS[o.work_type]}` : ""}
-                  {o.work_type === "hodiny" && o.hours != null
-                    ? ` · ${o.hours} h × ${o.hourly_rate} €`
-                    : ""}
-                  {o.start_date ? ` · ${o.start_date} → ${o.handover_date ?? "?"}` : ""}
-                </p>
-                {o.price != null && o.work_type !== "hodiny" && (
-                  <p className="text-xs text-ink-400">
-                    moja faktúra (80 %): {(o.price * 0.8).toFixed(2)} € · SUKA:{" "}
-                    {o.contribution_amount ?? (o.price * 0.1).toFixed(2)} €
-                  </p>
-                )}
-                {o.note && <p className="text-xs text-ink-400">{o.note}</p>}
-                <div className="flex flex-wrap gap-2 pt-0.5">
-                  <form action={togglePeterInvoiceIssued.bind(null, o.id, !o.peter_invoice_issued)}>
-                    <button
-                      type="submit"
-                      className={o.peter_invoice_issued ? "badge-success" : "badge-neutral"}
-                    >
-                      {o.peter_invoice_issued ? "Peter fakturoval ✓" : "označiť: Peter fakturoval"}
-                    </button>
-                  </form>
-                  <DeleteOrderButton orderId={o.id} />
-                </div>
-              </li>
+      <div className="card overflow-x-auto p-5">
+        <table className="w-full min-w-[980px] border-collapse">
+          <thead>
+            <tr className="border-b border-ink-100 text-left text-xs font-medium uppercase tracking-wide text-ink-500">
+              <th className="pb-2 pr-3">Číslo</th>
+              <th className="pb-2 pr-3">Zákazník</th>
+              <th className="pb-2 pr-3">Stavba</th>
+              <th className="pb-2 pr-3">Typ</th>
+              <th className="pb-2 pr-3">Termín</th>
+              <th className="pb-2 pr-3">Cena</th>
+              <th className="pb-2 pr-3">Peter fakturoval</th>
+              <th className="pb-2">Akcie</th>
+            </tr>
+          </thead>
+          <tbody>
+            {monthOrders?.map((o) => (
+              <EditableOrderRow
+                key={o.id}
+                order={{
+                  id: o.id,
+                  order_number: o.order_number,
+                  customer_name: o.customer_name,
+                  work_type: o.work_type,
+                  order_date: o.order_date,
+                  start_date: o.start_date,
+                  handover_date: o.handover_date,
+                  price: o.price,
+                  contribution_amount: o.contribution_amount,
+                  hours: o.hours,
+                  hourly_rate: o.hourly_rate,
+                  peter_invoice_issued: o.peter_invoice_issued,
+                  peter_invoice_date: o.peter_invoice_date,
+                  note: o.note,
+                  site_id: o.site_id,
+                  // @ts-expect-error supabase join shape
+                  siteName: o.sites?.name ?? "bez stavby",
+                }}
+                sites={sites ?? []}
+              />
             ))}
-            {!orders?.length && <li className="py-2 text-ink-400">Zatiaľ žiadne objednávky.</li>}
-          </ul>
-        </div>
-      </section>
-
-      <section className="grid gap-6 md:grid-cols-2">
-        <div className="card p-5">
-          <h2 className="mb-4 font-semibold text-ink-900">Nová faktúra</h2>
-          <InvoiceForm orders={orders ?? []} />
-        </div>
-
-        <div className="card p-5">
-          <h2 className="mb-4 font-semibold text-ink-900">Existujúce faktúry</h2>
-          <ul className="divide-y divide-ink-100 text-sm">
-            {invoices?.map((i) => (
-              <li key={i.id} className="space-y-2 py-3">
-                <div className="flex justify-between">
-                  <span className="text-ink-700">
-                    {i.invoice_number} ·{" "}
-                    {/* @ts-expect-error supabase join shape */}
-                    {i.orders?.order_number ?? "—"} · {i.orders?.customer_name ?? "—"}
-                  </span>
-                  <span className="font-medium text-ink-900">{i.amount} €</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <form action={toggleInvoiceFlag.bind(null, i.id, "sent", !i.sent)}>
-                    <button type="submit" className={i.sent ? "badge-success" : "badge-neutral"}>
-                      {i.sent ? "odoslaná ✓" : "označiť ako odoslanú"}
-                    </button>
-                  </form>
-                  <form action={toggleInvoiceFlag.bind(null, i.id, "paid", !i.paid)}>
-                    <button type="submit" className={i.paid ? "badge-success" : "badge-neutral"}>
-                      {i.paid ? "uhradená ✓" : "označiť ako uhradenú"}
-                    </button>
-                  </form>
-                </div>
-              </li>
-            ))}
-            {!invoices?.length && <li className="py-2 text-ink-400">Zatiaľ žiadne faktúry.</li>}
-          </ul>
-        </div>
-      </section>
+          </tbody>
+        </table>
+        {!monthOrders?.length && (
+          <p className="py-4 text-sm text-ink-400">Žiadne objednávky za tento mesiac.</p>
+        )}
+      </div>
     </div>
   );
 }

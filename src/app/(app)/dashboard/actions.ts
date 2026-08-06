@@ -22,6 +22,32 @@ export async function addWorkHours(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
+export async function updateWorkHours(id: string, formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase
+    .from("work_hours")
+    .update({
+      work_date: formData.get("work_date"),
+      hours_worked: formData.get("hours_worked"),
+      site_id: formData.get("site_id"),
+      description: formData.get("description"),
+    })
+    .eq("id", id);
+
+  revalidatePath("/dashboard");
+}
+
+export async function deleteWorkHours(id: string) {
+  const supabase = await createClient();
+  await supabase.from("work_hours").delete().eq("id", id);
+  revalidatePath("/dashboard");
+}
+
 export async function approveWorkHours(id: string) {
   const supabase = await createClient();
   const {
@@ -96,5 +122,26 @@ export async function addDiaryEntry(formData: FormData) {
     }
   }
 
+  revalidatePath("/dashboard");
+}
+
+export async function updateDiaryEntry(id: string, formData: FormData) {
+  const supabase = await createClient();
+
+  await supabase
+    .from("site_diary_entries")
+    .update({
+      entry_date: formData.get("entry_date"),
+      site_id: formData.get("site_id"),
+      content: formData.get("content"),
+    })
+    .eq("id", id);
+
+  revalidatePath("/dashboard");
+}
+
+export async function deleteDiaryEntry(id: string) {
+  const supabase = await createClient();
+  await supabase.from("site_diary_entries").delete().eq("id", id);
   revalidatePath("/dashboard");
 }

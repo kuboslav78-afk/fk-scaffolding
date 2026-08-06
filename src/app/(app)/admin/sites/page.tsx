@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/get-profile";
-import { createSite, updateSiteForeman } from "./actions";
+import { createSite } from "./actions";
+import { EditableSiteRow } from "@/components/editable-site-row";
 
 export default async function SitesPage() {
   const profile = await getProfile();
@@ -44,39 +45,9 @@ export default async function SitesPage() {
 
         <div className="card p-5">
           <h2 className="mb-4 font-semibold text-ink-900">Existujúce stavby</h2>
-          <ul className="divide-y divide-ink-100 text-sm">
+          <ul className="text-sm">
             {sites?.map((s) => (
-              <li key={s.id} className="space-y-2 py-3">
-                <div>
-                  <p className="font-medium text-ink-900">{s.name}</p>
-                  {s.address && <p className="text-ink-500">{s.address}</p>}
-                </div>
-                <form
-                  action={async (formData: FormData) => {
-                    "use server";
-                    const foremanId = formData.get("foreman_id");
-                    await updateSiteForeman(s.id, foremanId ? String(foremanId) : null);
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <span className="text-ink-500">Vedúci:</span>
-                  <select
-                    name="foreman_id"
-                    defaultValue={s.foreman_id ?? ""}
-                    className="rounded-lg border border-ink-200 px-2 py-1 text-xs"
-                  >
-                    <option value="">— nepridelený —</option>
-                    {profiles?.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.full_name}
-                      </option>
-                    ))}
-                  </select>
-                  <button type="submit" className="btn-secondary btn-sm">
-                    Uložiť
-                  </button>
-                </form>
-              </li>
+              <EditableSiteRow key={s.id} site={s} profiles={profiles ?? []} />
             ))}
             {!sites?.length && <li className="py-2 text-ink-400">Zatiaľ žiadne stavby.</li>}
           </ul>
