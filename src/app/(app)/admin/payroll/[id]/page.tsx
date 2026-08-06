@@ -22,7 +22,7 @@ export default async function PayrollDetailPage({
 
   const supabase = await createClient();
 
-  const [{ data: employee }, { data: dayEntries }, { data: accommodation }] = await Promise.all([
+  const [{ data: employee }, { data: dayEntries }] = await Promise.all([
     supabase.from("profiles").select("id, full_name, hourly_rate").eq("id", id).single(),
     supabase
       .from("work_hours")
@@ -31,12 +31,6 @@ export default async function PayrollDetailPage({
       .gte("work_date", rangeStart)
       .lt("work_date", rangeEnd)
       .order("work_date"),
-    supabase
-      .from("accommodation_costs")
-      .select("amount")
-      .eq("employee_id", id)
-      .eq("month", rangeStart)
-      .maybeSingle(),
   ]);
 
   if (!employee) notFound();
@@ -44,8 +38,6 @@ export default async function PayrollDetailPage({
   const totalHours = (dayEntries ?? []).reduce((sum, h) => sum + h.hours_worked, 0);
   const hourlyRate = employee.hourly_rate ?? 0;
   const wage = totalHours * hourlyRate;
-  const accommodationAmount = accommodation?.amount ?? 0;
-  const total = wage + accommodationAmount;
   const monthParam = monthParamString(year, monthIndex);
 
   return (
@@ -73,7 +65,7 @@ export default async function PayrollDetailPage({
         {MONTH_NAMES[monthIndex]} {year}
       </h2>
 
-      <section className="grid gap-4 sm:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-3">
         <div className="card p-4">
           <p className="text-xs font-medium text-ink-400">Hodiny</p>
           <p className="mt-1 text-xl font-semibold text-ink-900">{totalHours} h</p>
@@ -84,18 +76,9 @@ export default async function PayrollDetailPage({
         </div>
         <div className="card p-4">
           <p className="text-xs font-medium text-ink-400">Mzda</p>
-          <p className="mt-1 text-xl font-semibold text-ink-900">{wage.toFixed(2)} €</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-xs font-medium text-ink-400">Ubytovanie</p>
-          <p className="mt-1 text-xl font-semibold text-ink-900">{accommodationAmount.toFixed(2)} €</p>
+          <p className="mt-1 text-xl font-semibold text-brand-400">{wage.toFixed(2)} €</p>
         </div>
       </section>
-
-      <div className="card flex items-center justify-between p-4">
-        <p className="font-medium text-ink-900">Spolu za mesiac</p>
-        <p className="text-xl font-semibold text-brand-400">{total.toFixed(2)} €</p>
-      </div>
 
       <div className="card overflow-x-auto p-5">
         <table className="w-full min-w-[640px] border-collapse">
