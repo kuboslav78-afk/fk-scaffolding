@@ -3,8 +3,20 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile } from "@/lib/get-profile";
 import { parseOrderPdf } from "@/lib/parse-order-pdf";
+
+async function uploadOrderPdf(orderId: string, pdf: File) {
+  const admin = createAdminClient();
+  const path = `${orderId}/${Date.now()}-${pdf.name}`;
+  const { error: uploadError } = await admin.storage.from("order-pdfs").upload(path, pdf);
+  if (uploadError) {
+    console.error("order pdf upload failed:", uploadError);
+    return;
+  }
+  await admin.from("orders").update({ pdf_path: path }).eq("id", orderId);
+}
 
 export async function parseOrderPdfAction(formData: FormData) {
   const requester = await getProfile();
@@ -48,28 +60,37 @@ export async function createOrder(formData: FormData) {
 
   const orderDate = String(formData.get("order_date") ?? "");
 
-  const { error: insertError } = await supabase.from("orders").insert({
-    order_number: formData.get("order_number") || null,
-    customer_name: formData.get("customer_name") || null,
-    site_id: siteId || null,
-    work_type: formData.get("work_type") || null,
-    order_date: orderDate,
-    start_date: formData.get("start_date") || null,
-    handover_date: formData.get("handover_date") || null,
-    price: formData.get("price") || null,
-    contribution_amount: formData.get("contribution_amount") || null,
-    hours: formData.get("hours") || null,
-    hourly_rate: formData.get("hourly_rate") || null,
-    peter_invoice_issued: formData.get("peter_invoice_issued") === "true",
-    peter_invoice_date:
-      formData.get("peter_invoice_issued") === "true" ? formData.get("peter_invoice_date") || null : null,
-    description: formData.get("description") || null,
-    note: formData.get("note") || null,
-    created_by: requester.id,
-  });
+  const { data: inserted, error: insertError } = await supabase
+    .from("orders")
+    .insert({
+      order_number: formData.get("order_number") || null,
+      customer_name: formData.get("customer_name") || null,
+      site_id: siteId || null,
+      work_type: formData.get("work_type") || null,
+      order_date: orderDate,
+      start_date: formData.get("start_date") || null,
+      handover_date: formData.get("handover_date") || null,
+      price: formData.get("price") || null,
+      contribution_amount: formData.get("contribution_amount") || null,
+      hours: formData.get("hours") || null,
+      hourly_rate: formData.get("hourly_rate") || null,
+      peter_invoice_issued: formData.get("peter_invoice_issued") === "true",
+      peter_invoice_date:
+        formData.get("peter_invoice_issued") === "true" ? formData.get("peter_invoice_date") || null : null,
+      description: formData.get("description") || null,
+      note: formData.get("note") || null,
+      created_by: requester.id,
+    })
+    .select("id")
+    .single();
 
   if (insertError) {
     console.error("createOrder insert failed:", insertError);
+  }
+
+  const pdf = formData.get("pdf");
+  if (inserted && pdf instanceof File && pdf.size > 0) {
+    await uploadOrderPdf(inserted.id, pdf);
   }
 
   revalidatePath("/admin/orders");
@@ -201,6 +222,11 @@ export async function updateOrder(orderId: string, formData: FormData) {
       note: formData.get("note") || null,
     })
     .eq("id", orderId);
+
+  const pdf = formData.get("pdf");
+  if (pdf instanceof File && pdf.size > 0) {
+    await uploadOrderPdf(orderId, pdf);
+  }
 
   revalidatePath("/admin/orders");
 }

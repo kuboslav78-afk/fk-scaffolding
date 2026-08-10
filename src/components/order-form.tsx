@@ -80,10 +80,12 @@ export function OrderForm({ sites }: { sites: Site[] }) {
         <label className="label">Nahrať objednávku (PDF) — auto-vyplní polia</label>
         <input
           type="file"
+          name="pdf"
           accept="application/pdf"
           onChange={handlePdfChange}
           className="block w-full text-sm"
         />
+        <p className="mt-1 text-xs text-ink-400">Súbor sa uloží k objednávke pre spätné dohľadanie.</p>
         {isPending && <p className="label">Načítavam z PDF…</p>}
         {parseError && <p className="text-xs text-red-400">{parseError}</p>}
       </div>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile } from "@/lib/get-profile";
 import { EditableOrderRow } from "@/components/editable-order-row";
 import { OrdersSubnav } from "@/components/orders-subnav";
@@ -60,12 +61,28 @@ export default async function OrdersPage({
     supabase
       .from("orders")
       .select(
-        "id, order_number, customer_name, work_type, order_date, start_date, handover_date, price, contribution_amount, hours, hourly_rate, peter_invoice_issued, peter_invoice_date, note, site_id, sites(name)"
+        "id, order_number, customer_name, work_type, order_date, start_date, handover_date, price, contribution_amount, hours, hourly_rate, peter_invoice_issued, peter_invoice_date, note, site_id, pdf_path, sites(name)"
       )
       .gte("order_date", rangeStart)
       .lt("order_date", rangeEnd)
       .order("order_date", { ascending: false }),
   ]);
+
+  const pdfUrlByOrder = new Map<string, string>();
+  const ordersWithPdf = (monthOrders ?? []).filter((o) => o.pdf_path);
+  if (ordersWithPdf.length) {
+    const admin = createAdminClient();
+    const { data: signedUrls } = await admin.storage
+      .from("order-pdfs")
+      .createSignedUrls(
+        ordersWithPdf.map((o) => o.pdf_path as string),
+        3600
+      );
+    ordersWithPdf.forEach((o, i) => {
+      const url = signedUrls?.[i]?.signedUrl;
+      if (url) pdfUrlByOrder.set(o.id, url);
+    });
+  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 md:px-8 md:py-8">
@@ -133,6 +150,7 @@ export default async function OrdersPage({
                   siteName: o.sites?.name ?? "bez stavby",
                 }}
                 sites={sites ?? []}
+                pdfUrl={pdfUrlByOrder.get(o.id) ?? null}
               />
             ))}
           </tbody>

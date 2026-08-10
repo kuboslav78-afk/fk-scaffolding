@@ -37,7 +37,15 @@ type Order = {
   siteName: string;
 };
 
-export function EditableOrderRow({ order, sites }: { order: Order; sites: Site[] }) {
+export function EditableOrderRow({
+  order,
+  sites,
+  pdfUrl,
+}: {
+  order: Order;
+  sites: Site[];
+  pdfUrl: string | null;
+}) {
   const [editing, setEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [peterDate, setPeterDate] = useState(new Date().toISOString().slice(0, 10));
@@ -89,6 +97,12 @@ export function EditableOrderRow({ order, sites }: { order: Order; sites: Site[]
             <div className="grid grid-cols-2 gap-2">
               <textarea name="description" defaultValue={""} placeholder="Popis práce" rows={2} className="input" />
               <textarea name="note" defaultValue={order.note ?? ""} placeholder="Poznámka" rows={2} className="input" />
+            </div>
+            <div>
+              <label className="label">
+                {pdfUrl ? "Nahradiť archivované PDF" : "Nahrať PDF k objednávke"}
+              </label>
+              <input type="file" name="pdf" accept="application/pdf" className="block w-full text-sm" />
             </div>
             <div className="flex gap-2">
               <button type="submit" disabled={isPending} className="btn-primary btn-sm">
@@ -155,6 +169,11 @@ export function EditableOrderRow({ order, sites }: { order: Order; sites: Site[]
       </td>
       <td className="whitespace-nowrap py-2.5">
         <div className="flex gap-2">
+          {pdfUrl && (
+            <a href={pdfUrl} target="_blank" rel="noreferrer" className="btn-ghost btn-sm">
+              PDF
+            </a>
+          )}
           <button onClick={() => setEditing(true)} className="btn-ghost btn-sm">
             Upraviť
           </button>
