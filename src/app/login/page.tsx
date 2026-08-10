@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ScaffoldDecoration } from "@/components/scaffold-decoration";
 import { LoginTrail } from "@/components/login-trail";
+import { CosmicDustBackground } from "@/components/cosmic-dust-background";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,7 +34,7 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0a0908] px-4">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(1000px_560px_at_50%_-12%,#2a2620_0%,transparent_60%)]" />
+      <CosmicDustBackground />
 
       <ScaffoldDecoration side="left" />
       <ScaffoldDecoration side="right" />

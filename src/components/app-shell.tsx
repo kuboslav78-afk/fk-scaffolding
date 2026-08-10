@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { signOut } from "@/app/actions";
 import { ScaffoldDecoration } from "@/components/scaffold-decoration";
+import { CosmicDustBackground } from "@/components/cosmic-dust-background";
 
 type NavItem = {
   href: string;
@@ -122,7 +123,7 @@ export function AppShell({
 
   return (
     <div className="relative flex min-h-screen overflow-hidden bg-[#0a0908]">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(1200px_500px_at_60%_-15%,#221f19_0%,transparent_60%)]" />
+      <CosmicDustBackground />
       <ScaffoldDecoration side="right" />
 
       {/* Desktop sidebar */}
