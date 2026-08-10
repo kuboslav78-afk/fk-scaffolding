@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateWorkHours, deleteWorkHours } from "@/app/(app)/dashboard/actions";
+import { updateWorkHours, deleteWorkHours } from "@/app/(app)/hodiny/actions";
 
 type Site = { id: string; name: string };
 

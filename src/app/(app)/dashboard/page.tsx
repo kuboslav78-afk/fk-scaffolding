@@ -1,245 +1,192 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile } from "@/lib/get-profile";
-import { addWorkHours, addDiaryEntry, approveWorkHours } from "./actions";
-import { EditableHourRow } from "@/components/editable-hour-row";
-import { EditableDiaryRow } from "@/components/editable-diary-row";
+import { WeekAssignmentCell } from "@/components/week-assignment-cell";
+import { AvailabilityDayCard } from "@/components/availability-day-card";
+import { DAY_NAMES, parseWeekParam, weekParamString, weekDates, adjacentWeekParams } from "@/lib/week";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ week?: string }>;
+}) {
   const profile = await getProfile();
   if (!profile) redirect("/login");
 
+  const { week } = await searchParams;
+  const monday = parseWeekParam(week);
+  const days = weekDates(monday);
+  const rangeStart = days[0];
+  const rangeEnd = days[6];
+  const { prevParam, nextParam } = adjacentWeekParams(monday);
+  const weekParam = weekParamString(monday);
+
   const supabase = await createClient();
 
-  const { data: sites } = await supabase.from("sites").select("id, name").order("name");
+  if (profile.role === "admin") {
+    const [{ data: employees }, { data: sites }, { data: assignments }, { data: availabilities }] =
+      await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("role", ["employee", "foreman"])
+          .order("full_name"),
+        supabase.from("sites").select("id, name").order("name"),
+        supabase
+          .from("site_assignments")
+          .select("employee_id, work_date, site_id")
+          .gte("work_date", rangeStart)
+          .lte("work_date", rangeEnd),
+        supabase
+          .from("availability")
+          .select("employee_id, work_date, status")
+          .gte("work_date", rangeStart)
+          .lte("work_date", rangeEnd),
+      ]);
 
-  const { data: foremanSites } = await supabase
-    .from("sites")
-    .select("id, name")
-    .eq("foreman_id", profile.id);
+    const assignmentMap = new Map<string, string>();
+    for (const a of assignments ?? []) assignmentMap.set(`${a.employee_id}_${a.work_date}`, a.site_id);
 
-  const isForemanSomewhere = !!foremanSites?.length;
+    const availabilityMap = new Map<string, "work" | "off">();
+    for (const a of availabilities ?? []) {
+      availabilityMap.set(`${a.employee_id}_${a.work_date}`, a.status as "work" | "off");
+    }
 
-  const { data: hours } = await supabase
-    .from("work_hours")
-    .select("id, work_date, hours_worked, description, approved, site_id, sites(name)")
-    .eq("employee_id", profile.id)
-    .order("work_date", { ascending: false })
-    .limit(10);
+    const assignedSlotsThisWeek = assignments?.length ?? 0;
+    const totalSlots = (employees?.length ?? 0) * 7;
+    const offRequests = (availabilities ?? []).filter((a) => a.status === "off").length;
 
-  const { data: diaryEntries } = await supabase
-    .from("site_diary_entries")
-    .select("id, entry_date, content, site_id, sites(name)")
-    .eq("employee_id", profile.id)
-    .order("entry_date", { ascending: false })
-    .limit(10);
+    return (
+      <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 md:px-8 md:py-8">
+        <h1 className="text-2xl font-semibold text-ink-900">Nástenka</h1>
 
-  let pendingApprovals: {
-    id: string;
-    work_date: string;
-    hours_worked: number;
-    site_name: string;
-    employee_name: string;
-  }[] = [];
+        <section className="grid gap-4 sm:grid-cols-3">
+          <div className="card p-4">
+            <p className="text-xs font-medium text-ink-400">Zamestnancov</p>
+            <p className="mt-1 text-2xl font-semibold text-ink-900">{employees?.length ?? 0}</p>
+          </div>
+          <div className="card p-4">
+            <p className="text-xs font-medium text-ink-400">Priradené smeny tento týždeň</p>
+            <p className="mt-1 text-2xl font-semibold text-ink-900">
+              {assignedSlotsThisWeek} / {totalSlots}
+            </p>
+          </div>
+          <div className="card p-4">
+            <p className="text-xs font-medium text-ink-400">Žiadosti o voľno</p>
+            <p className="mt-1 text-2xl font-semibold text-brand-400">{offRequests}</p>
+          </div>
+        </section>
 
-  if (isForemanSomewhere) {
-    const siteIds = foremanSites!.map((s) => s.id);
-    const { data: pending } = await supabase
-      .from("work_hours")
-      .select("id, work_date, hours_worked, site_id, sites(name), profiles!employee_id(full_name)")
-      .in("site_id", siteIds)
-      .eq("approved", false)
-      .order("work_date", { ascending: false });
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-ink-900">Týždenný rozpis</h2>
+          <div className="flex items-center gap-1">
+            <Link href={`/dashboard?week=${prevParam}`} className="btn-ghost btn-sm px-2">
+              ←
+            </Link>
+            <Link href="/dashboard" className="btn-ghost btn-sm">
+              tento týždeň
+            </Link>
+            <Link href={`/dashboard?week=${nextParam}`} className="btn-ghost btn-sm px-2">
+              →
+            </Link>
+          </div>
+        </div>
 
-    pendingApprovals = (pending ?? []).map((h) => ({
-      id: h.id,
-      work_date: h.work_date,
-      hours_worked: h.hours_worked,
-      // @ts-expect-error supabase join shape
-      site_name: h.sites?.name ?? "—",
-      // @ts-expect-error supabase join shape
-      employee_name: h.profiles?.full_name ?? "—",
-    }));
+        <div className="card overflow-x-auto p-5">
+          <table className="w-full min-w-[900px] border-collapse">
+            <thead>
+              <tr className="border-b border-ink-100 text-left text-xs font-medium uppercase tracking-wide text-ink-500">
+                <th className="pb-2 pr-3">Zamestnanec</th>
+                {days.map((d, i) => (
+                  <th key={d} className="pb-2 pr-3">
+                    {DAY_NAMES[i]}
+                    <br />
+                    <span className="normal-case text-ink-400">{d}</span>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {employees?.map((e) => (
+                <tr key={e.id} className="border-b border-ink-100 align-top text-sm">
+                  <td className="whitespace-nowrap py-2.5 pr-3 font-medium text-ink-900">{e.full_name}</td>
+                  {days.map((d) => (
+                    <td key={d} className="py-2.5 pr-3">
+                      <WeekAssignmentCell
+                        employeeId={e.id}
+                        date={d}
+                        siteId={assignmentMap.get(`${e.id}_${d}`) ?? null}
+                        sites={sites ?? []}
+                        availabilityStatus={availabilityMap.get(`${e.id}_${d}`)}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!employees?.length && <p className="py-4 text-sm text-ink-400">Zatiaľ žiadni zamestnanci.</p>}
+        </div>
+      </div>
+    );
   }
 
-  let photosByEntry = new Map<string, string[]>();
-  if (diaryEntries?.length) {
-    const admin = createAdminClient();
-    const { data: photos } = await admin
-      .from("diary_photos")
-      .select("diary_entry_id, storage_path")
-      .in(
-        "diary_entry_id",
-        diaryEntries.map((d) => d.id)
-      );
+  const [{ data: myAssignments }, { data: myAvailability }] = await Promise.all([
+    supabase
+      .from("site_assignments")
+      .select("work_date, sites(name)")
+      .eq("employee_id", profile.id)
+      .gte("work_date", rangeStart)
+      .lte("work_date", rangeEnd),
+    supabase
+      .from("availability")
+      .select("work_date, status")
+      .eq("employee_id", profile.id)
+      .gte("work_date", rangeStart)
+      .lte("work_date", rangeEnd),
+  ]);
 
-    if (photos?.length) {
-      const { data: signedUrls } = await admin.storage
-        .from("diary-photos")
-        .createSignedUrls(
-          photos.map((p) => p.storage_path),
-          3600
-        );
+  const siteByDate = new Map<string, string>();
+  for (const a of myAssignments ?? []) {
+    // @ts-expect-error supabase join shape
+    siteByDate.set(a.work_date, a.sites?.name ?? null);
+  }
 
-      photosByEntry = photos.reduce((map, p, i) => {
-        const url = signedUrls?.[i]?.signedUrl;
-        if (url) {
-          const existing = map.get(p.diary_entry_id) ?? [];
-          existing.push(url);
-          map.set(p.diary_entry_id, existing);
-        }
-        return map;
-      }, new Map<string, string[]>());
-    }
+  const statusByDate = new Map<string, "work" | "off">();
+  for (const a of myAvailability ?? []) {
+    statusByDate.set(a.work_date, a.status as "work" | "off");
   }
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 md:px-8 md:py-8">
       <h1 className="text-2xl font-semibold text-ink-900">Vitaj, {profile.full_name}</h1>
 
-      {isForemanSomewhere && (
-        <section className="card border-amber-900/40 bg-amber-500/10 p-5">
-          <h2 className="mb-4 font-semibold text-ink-900">
-            Na schválenie ({foremanSites!.map((s) => s.name).join(", ")})
-          </h2>
-          <ul className="divide-y divide-amber-900/40 text-sm">
-            {pendingApprovals.map((h) => (
-              <li key={h.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
-                <span className="text-ink-700">
-                  {h.work_date} · {h.employee_name} · {h.site_name} ·{" "}
-                  <span className="font-medium">{h.hours_worked} h</span>
-                </span>
-                <form action={approveWorkHours.bind(null, h.id)}>
-                  <button type="submit" className="btn-primary btn-sm">
-                    Schváliť
-                  </button>
-                </form>
-              </li>
-            ))}
-            {!pendingApprovals.length && <li className="py-2 text-ink-400">Nič na schválenie.</li>}
-          </ul>
-        </section>
-      )}
-
-      <section className="grid gap-6 md:grid-cols-2">
-        <div className="card p-5">
-          <h2 className="mb-4 font-semibold text-ink-900">Evidencia hodín</h2>
-          <form action={addWorkHours} className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <input
-                type="date"
-                name="work_date"
-                required
-                defaultValue={new Date().toISOString().slice(0, 10)}
-                className="input"
-              />
-              <input
-                type="number"
-                step="0.25"
-                min="0.25"
-                name="hours_worked"
-                placeholder="Počet hodín"
-                required
-                className="input"
-              />
-            </div>
-            <select name="site_id" required defaultValue="" className="input">
-              <option value="" disabled>
-                Vyber stavbu
-              </option>
-              {sites?.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-            <textarea name="description" placeholder="Popis práce" rows={2} className="input" />
-            <button type="submit" className="btn-primary">
-              Uložiť hodiny
-            </button>
-          </form>
-
-          <ul className="mt-5 divide-y divide-ink-100 text-sm">
-            {hours?.map((h) => (
-              <EditableHourRow
-                key={h.id}
-                hour={{
-                  id: h.id,
-                  work_date: h.work_date,
-                  hours_worked: h.hours_worked,
-                  description: h.description,
-                  approved: h.approved,
-                  site_id: h.site_id,
-                  // @ts-expect-error supabase join shape
-                  siteName: h.sites?.name ?? "—",
-                }}
-                sites={sites ?? []}
-              />
-            ))}
-            {!hours?.length && <li className="py-2 text-ink-400">Zatiaľ žiadne záznamy.</li>}
-          </ul>
+      <div className="flex items-center justify-between">
+        <h2 className="font-semibold text-ink-900">Môj týždenný plán</h2>
+        <div className="flex items-center gap-1">
+          <Link href={`/dashboard?week=${prevParam}`} className="btn-ghost btn-sm px-2">
+            ←
+          </Link>
+          <Link href="/dashboard" className="btn-ghost btn-sm">
+            tento týždeň
+          </Link>
+          <Link href={`/dashboard?week=${nextParam}`} className="btn-ghost btn-sm px-2">
+            →
+          </Link>
         </div>
+      </div>
 
-        <div className="card p-5">
-          <h2 className="mb-4 font-semibold text-ink-900">Stavebný denník</h2>
-          <form action={addDiaryEntry} className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <input
-                type="date"
-                name="entry_date"
-                required
-                defaultValue={new Date().toISOString().slice(0, 10)}
-                className="input"
-              />
-              <select name="site_id" required defaultValue="" className="input">
-                <option value="" disabled>
-                  Vyber stavbu
-                </option>
-                {sites?.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <textarea
-              name="content"
-              placeholder="Zápis do denníka"
-              rows={3}
-              required
-              className="input"
-            />
-            {(isForemanSomewhere || profile.role === "admin") && (
-              <div>
-                <label className="label">Fotka (len vedúci stavby / admin)</label>
-                <input type="file" name="photo" accept="image/*" className="block w-full text-sm" />
-              </div>
-            )}
-            <button type="submit" className="btn-primary">
-              Pridať zápis
-            </button>
-          </form>
-
-          <ul className="mt-5 space-y-3 text-sm">
-            {diaryEntries?.map((d) => (
-              <EditableDiaryRow
-                key={d.id}
-                entry={{
-                  id: d.id,
-                  entry_date: d.entry_date,
-                  content: d.content,
-                  site_id: d.site_id,
-                  // @ts-expect-error supabase join shape
-                  siteName: d.sites?.name ?? "—",
-                }}
-                sites={sites ?? []}
-                photos={photosByEntry.get(d.id) ?? []}
-              />
-            ))}
-            {!diaryEntries?.length && <li className="text-ink-400">Zatiaľ žiadne zápisy.</li>}
-          </ul>
-        </div>
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {days.map((d, i) => (
+          <AvailabilityDayCard
+            key={d}
+            date={d}
+            dayName={DAY_NAMES[i]}
+            siteName={siteByDate.get(d) ?? null}
+            status={statusByDate.get(d) ?? null}
+          />
+        ))}
       </section>
     </div>
   );

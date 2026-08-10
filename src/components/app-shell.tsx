@@ -55,15 +55,29 @@ const ICONS = {
       <path d="M5.5 8v0M14.5 12v0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   ),
+  hours: (
+    <svg viewBox="0 0 20 20" fill="none" className="h-4.5 w-4.5">
+      <circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M10 6v4l3 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  diary: (
+    <svg viewBox="0 0 20 20" fill="none" className="h-4.5 w-4.5">
+      <rect x="4" y="3" width="12" height="14" rx="1.2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M7 7h6M7 10h6M7 13h3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  ),
 };
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Nástenka", icon: ICONS.dashboard },
+  { href: "/hodiny", label: "Hodiny", icon: ICONS.hours },
   { href: "/admin", label: "Administrácia", icon: ICONS.admin, adminOnly: true },
   { href: "/admin/employees", label: "Zamestnanci", icon: ICONS.employees, adminOnly: true },
   { href: "/admin/sites", label: "Stavby", icon: ICONS.sites, adminOnly: true },
   { href: "/admin/orders", label: "Objednávky", icon: ICONS.orders, adminOnly: true },
   { href: "/admin/payroll", label: "Výplaty", icon: ICONS.payroll, adminOnly: true },
+  { href: "/admin/diary", label: "Stavebný denník", icon: ICONS.diary, adminOnly: true },
 ];
 
 function NavLinks({ role, onNavigate }: { role: string; onNavigate?: () => void }) {
