@@ -4,6 +4,10 @@ import { useRef, useState, useTransition } from "react";
 import { createOrder, parseOrderPdfAction } from "@/app/(app)/admin/orders/actions";
 import { todayISO } from "@/lib/dates";
 
+function monthOf(iso: string) {
+  return iso.slice(0, 7);
+}
+
 type Site = { id: string; name: string; project_number: string | null };
 
 export function OrderForm({ sites }: { sites: Site[] }) {
@@ -18,6 +22,8 @@ export function OrderForm({ sites }: { sites: Site[] }) {
   const [newSiteName, setNewSiteName] = useState("");
   const [projectNumber, setProjectNumber] = useState("");
   const [orderDate, setOrderDate] = useState(todayISO());
+  const [displayMonth, setDisplayMonth] = useState(monthOf(todayISO()));
+  const [monthOverridden, setMonthOverridden] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [handoverDate, setHandoverDate] = useState("");
   const [price, setPrice] = useState("");
@@ -54,7 +60,11 @@ export function OrderForm({ sites }: { sites: Site[] }) {
       if (p.order_number) setOrderNumber(p.order_number);
       if (p.customer_name) setCustomerName(p.customer_name);
       if (p.work_type) setWorkType(p.work_type);
-      if (p.order_date) setOrderDate(p.order_date);
+      if (p.order_date) {
+        setOrderDate(p.order_date);
+        setDisplayMonth(monthOf(p.order_date));
+        setMonthOverridden(false);
+      }
       if (p.start_date) setStartDate(p.start_date);
       if (p.handover_date) setHandoverDate(p.handover_date);
       if (p.price != null) setPrice(String(p.price));
@@ -178,7 +188,7 @@ export function OrderForm({ sites }: { sites: Site[] }) {
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <div>
           <label className="label">Dátum objednávky</label>
           <input
@@ -186,7 +196,24 @@ export function OrderForm({ sites }: { sites: Site[] }) {
             name="order_date"
             required
             value={orderDate}
-            onChange={(e) => setOrderDate(e.target.value)}
+            onChange={(e) => {
+              setOrderDate(e.target.value);
+              if (!monthOverridden) setDisplayMonth(monthOf(e.target.value));
+            }}
+            className="input"
+          />
+        </div>
+        <div>
+          <label className="label">Zahrnúť do mesiaca</label>
+          <input
+            type="month"
+            name="display_month"
+            required
+            value={displayMonth}
+            onChange={(e) => {
+              setDisplayMonth(e.target.value);
+              setMonthOverridden(true);
+            }}
             className="input"
           />
         </div>
@@ -291,7 +318,7 @@ export function OrderForm({ sites }: { sites: Site[] }) {
 
       <label className="flex items-center gap-2 text-sm text-ink-700">
         <input type="checkbox" name="peter_invoice_issued" value="true" />
-        Peter už vystavil svoju faktúru (splatnosti sedia)
+        Dátum vystavenia už poznám (splatnosti sedia)
       </label>
 
       <textarea

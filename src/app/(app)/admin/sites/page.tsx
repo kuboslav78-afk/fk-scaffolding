@@ -14,7 +14,7 @@ export default async function SitesPage() {
   const [{ data: sites }, { data: profiles }] = await Promise.all([
     supabase
       .from("sites")
-      .select("id, name, address, foreman_id, profiles(full_name)")
+      .select("id, name, short_name, address, foreman_id, profiles(full_name)")
       .order("name"),
     supabase.from("profiles").select("id, full_name, role").order("full_name"),
   ]);
@@ -27,7 +27,8 @@ export default async function SitesPage() {
         <div className="card p-5">
           <h2 className="mb-4 font-semibold text-ink-900">Nová stavba</h2>
           <form action={createSite} className="space-y-3">
-            <input type="text" name="name" placeholder="Názov stavby" required className="input" />
+            <input type="text" name="short_name" placeholder="Krátky názov (napr. Kongresshalle)" className="input" />
+            <input type="text" name="name" placeholder="Celý názov stavby" required className="input" />
             <input type="text" name="address" placeholder="Adresa" className="input" />
             <select name="foreman_id" defaultValue="" className="input">
               <option value="">Bez vedúceho (zatiaľ)</option>

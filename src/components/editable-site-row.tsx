@@ -8,6 +8,7 @@ type Profile = { id: string; full_name: string };
 type Site = {
   id: string;
   name: string;
+  short_name: string | null;
   address: string | null;
   foreman_id: string | null;
 };
@@ -38,6 +39,13 @@ export function EditableSiteRow({ site, profiles }: { site: Site; profiles: Prof
           }}
           className="space-y-2"
         >
+          <input
+            type="text"
+            name="short_name"
+            defaultValue={site.short_name ?? ""}
+            placeholder="Krátky názov (napr. Kongresshalle)"
+            className="input"
+          />
           <input type="text" name="name" defaultValue={site.name} required className="input" />
           <input type="text" name="address" defaultValue={site.address ?? ""} placeholder="Adresa" className="input" />
           <div className="flex gap-2">
@@ -57,7 +65,8 @@ export function EditableSiteRow({ site, profiles }: { site: Site; profiles: Prof
     <li className="space-y-2 border-b border-ink-100 py-3 last:border-0">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="font-medium text-ink-900">{site.name}</p>
+          <p className="font-medium text-ink-900">{site.short_name || site.name}</p>
+          {site.short_name && <p className="text-ink-500">{site.name}</p>}
           {site.address && <p className="text-ink-500">{site.address}</p>}
         </div>
         <span className="flex shrink-0 gap-2">

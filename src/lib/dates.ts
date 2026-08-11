@@ -34,3 +34,23 @@ export function addMonthsISO(iso: string, months: number): string {
   date.setUTCMonth(date.getUTCMonth() + months);
   return formatISODate(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate());
 }
+
+const SK_MONTHS = [
+  "január",
+  "február",
+  "marec",
+  "apríl",
+  "máj",
+  "jún",
+  "júl",
+  "august",
+  "september",
+  "október",
+  "november",
+  "december",
+];
+
+export function formatDateSK(iso: string): string {
+  const { y, m, d } = parseISODate(iso);
+  return `${d}. ${SK_MONTHS[m - 1]} ${y}`;
+}

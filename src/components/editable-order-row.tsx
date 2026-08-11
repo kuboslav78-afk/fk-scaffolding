@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   updateOrder,
   markPeterInvoiceIssued,
   unmarkPeterInvoiceIssued,
 } from "@/app/(app)/admin/orders/actions";
 import { DeleteOrderButton } from "@/components/delete-order-button";
-import { todayISO } from "@/lib/dates";
+import { todayISO, formatDateSK } from "@/lib/dates";
 
 const WORK_TYPE_LABELS: Record<string, string> = {
   montaz: "Montáž",
@@ -15,7 +16,7 @@ const WORK_TYPE_LABELS: Record<string, string> = {
   hodiny: "Hodinovka",
 };
 
-const TABLE_COLS = 8;
+const TABLE_COLS = 6;
 
 type Site = { id: string; name: string };
 
@@ -25,6 +26,7 @@ type Order = {
   customer_name: string | null;
   work_type: string | null;
   order_date: string;
+  display_month: string;
   start_date: string | null;
   handover_date: string | null;
   price: number | null;
@@ -47,9 +49,19 @@ export function EditableOrderRow({
   sites: Site[];
   pdfUrl: string | null;
 }) {
+  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [peterDate, setPeterDate] = useState(todayISO());
+
+  const myInvoiceAmount =
+    order.work_type === "hodiny"
+      ? order.hours != null && order.hourly_rate != null
+        ? order.hours * order.hourly_rate
+        : order.price
+      : order.price != null
+        ? order.price * 0.8
+        : null;
 
   if (editing) {
     return (
@@ -84,6 +96,7 @@ export function EditableOrderRow({
             </div>
             <div className="grid grid-cols-3 gap-2 md:grid-cols-6">
               <input type="date" name="order_date" defaultValue={order.order_date} required className="input" />
+              <input type="month" name="display_month" defaultValue={order.display_month} required className="input" />
               <input type="date" name="start_date" defaultValue={order.start_date ?? ""} className="input" />
               <input type="date" name="handover_date" defaultValue={order.handover_date ?? ""} className="input" />
               <input type="number" step="0.01" name="price" defaultValue={order.price ?? ""} placeholder="Cena (€)" className="input" />
@@ -120,28 +133,24 @@ export function EditableOrderRow({
   }
 
   return (
-    <tr className="border-b border-ink-100 align-top text-sm">
-      <td className="whitespace-nowrap py-2.5 pr-3 font-medium text-ink-900">{order.order_number ?? "—"}</td>
-      <td className="py-2.5 pr-3 text-ink-700">{order.customer_name ?? "bez zákazníka"}</td>
-      <td className="py-2.5 pr-3 text-ink-500">{order.siteName}</td>
-      <td className="whitespace-nowrap py-2.5 pr-3 text-ink-500">
-        {order.work_type ? WORK_TYPE_LABELS[order.work_type] : "—"}
-        {order.work_type === "hodiny" && order.hours != null ? ` · ${order.hours}h × ${order.hourly_rate}€` : ""}
-      </td>
-      <td className="whitespace-nowrap py-2.5 pr-3 text-ink-500">
-        {order.start_date ? `${order.start_date} → ${order.handover_date ?? "?"}` : "—"}
-      </td>
-      <td className="whitespace-nowrap py-2.5 pr-3 text-ink-900">
-        {order.price != null ? `${order.price} €` : ""}
-        {order.price != null && order.work_type !== "hodiny" && (
-          <div className="text-xs text-ink-400">
-            80%: {(order.price * 0.8).toFixed(2)} € · SUKA:{" "}
-            {order.contribution_amount ?? (order.price * 0.1).toFixed(2)} €
-          </div>
+    <tr
+      onClick={() => router.push(`/admin/orders/${order.id}`)}
+      className="cursor-pointer border-b border-ink-100 text-sm hover:bg-ink-50"
+    >
+      <td className="whitespace-nowrap py-2.5 pr-2">
+        <span className="font-medium text-ink-900">{order.order_number ?? "—"}</span>
+        {order.customer_name && (
+          <span className="ml-1.5 text-xs text-ink-400">{order.customer_name.split(" ")[0]}</span>
         )}
-        {order.note && <div className="text-xs text-ink-400">{order.note}</div>}
       </td>
-      <td className="whitespace-nowrap py-2.5 pr-3">
+      <td className="max-w-[130px] truncate py-2.5 pr-2 text-ink-700">{order.siteName}</td>
+      <td className="whitespace-nowrap py-2.5 pr-2 text-ink-500">
+        {order.handover_date ? formatDateSK(order.handover_date) : "—"}
+      </td>
+      <td className="whitespace-nowrap py-2.5 pr-2 text-ink-900">
+        {myInvoiceAmount != null ? `${myInvoiceAmount.toFixed(2)} €` : "—"}
+      </td>
+      <td className="whitespace-nowrap py-2.5 pr-2" onClick={(e) => e.stopPropagation()}>
         {order.peter_invoice_issued ? (
           <button
             onClick={() => startTransition(() => unmarkPeterInvoiceIssued(order.id))}
@@ -156,7 +165,7 @@ export function EditableOrderRow({
               type="date"
               value={peterDate}
               onChange={(e) => setPeterDate(e.target.value)}
-              className="w-[130px] rounded-lg border border-ink-200 px-1.5 py-1 text-xs"
+              className="w-[108px] rounded-lg border border-ink-200 px-1 py-1 text-xs"
             />
             <button
               onClick={() => startTransition(() => markPeterInvoiceIssued(order.id, peterDate))}
@@ -168,7 +177,7 @@ export function EditableOrderRow({
           </span>
         )}
       </td>
-      <td className="whitespace-nowrap py-2.5">
+      <td className="whitespace-nowrap py-2.5" onClick={(e) => e.stopPropagation()}>
         <div className="flex gap-2">
           {pdfUrl && (
             <a href={pdfUrl} target="_blank" rel="noreferrer" className="btn-ghost btn-sm">

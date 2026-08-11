@@ -59,6 +59,7 @@ export async function createOrder(formData: FormData) {
   }
 
   const orderDate = String(formData.get("order_date") ?? "");
+  const displayMonth = String(formData.get("display_month") ?? "") || orderDate.slice(0, 7);
 
   const { data: inserted, error: insertError } = await supabase
     .from("orders")
@@ -68,6 +69,7 @@ export async function createOrder(formData: FormData) {
       site_id: siteId || null,
       work_type: formData.get("work_type") || null,
       order_date: orderDate,
+      display_month: displayMonth,
       start_date: formData.get("start_date") || null,
       handover_date: formData.get("handover_date") || null,
       price: formData.get("price") || null,
@@ -94,8 +96,7 @@ export async function createOrder(formData: FormData) {
   }
 
   revalidatePath("/admin/orders");
-  const month = orderDate.slice(0, 7);
-  redirect(month ? `/admin/orders?month=${month}` : "/admin/orders");
+  redirect(displayMonth ? `/admin/orders?month=${displayMonth}` : "/admin/orders");
 }
 
 export async function createInvoice(formData: FormData) {
@@ -204,6 +205,9 @@ export async function updateOrder(orderId: string, formData: FormData) {
 
   const supabase = await createClient();
 
+  const orderDate = String(formData.get("order_date") ?? "");
+  const displayMonth = String(formData.get("display_month") ?? "") || orderDate.slice(0, 7);
+
   await supabase
     .from("orders")
     .update({
@@ -211,7 +215,8 @@ export async function updateOrder(orderId: string, formData: FormData) {
       customer_name: formData.get("customer_name") || null,
       site_id: formData.get("site_id") || null,
       work_type: formData.get("work_type") || null,
-      order_date: formData.get("order_date"),
+      order_date: orderDate,
+      display_month: displayMonth,
       start_date: formData.get("start_date") || null,
       handover_date: formData.get("handover_date") || null,
       price: formData.get("price") || null,

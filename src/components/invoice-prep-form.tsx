@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { todayISO } from "@/lib/dates";
+import { todayISO, addMonthsISO } from "@/lib/dates";
 
 type Order = {
   id: string;
@@ -27,11 +27,14 @@ export function InvoicePrepForm({
   contacts: Contact[];
   adminName: string;
 }) {
-  const [selected, setSelected] = useState<Record<string, boolean>>({});
-  const [dueDates, setDueDates] = useState<Record<string, string>>({});
-  const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
-
   const today = todayISO();
+  const defaultDueDate = addMonthsISO(today, 1);
+
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [dueDates, setDueDates] = useState<Record<string, string>>(() =>
+    Object.fromEntries(orders.map((o) => [o.id, defaultDueDate]))
+  );
+  const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
 
   const selectedOrders = orders
     .filter((o) => selected[o.id] && dueDates[o.id])

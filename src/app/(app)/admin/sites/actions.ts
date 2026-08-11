@@ -13,6 +13,7 @@ export async function createSite(formData: FormData) {
 
   await supabase.from("sites").insert({
     name: formData.get("name"),
+    short_name: formData.get("short_name") || null,
     address: formData.get("address"),
     foreman_id: foremanId ? foremanId : null,
   });
@@ -39,6 +40,7 @@ export async function updateSite(siteId: string, formData: FormData) {
     .from("sites")
     .update({
       name: formData.get("name"),
+      short_name: formData.get("short_name") || null,
       address: formData.get("address") || null,
     })
     .eq("id", siteId);

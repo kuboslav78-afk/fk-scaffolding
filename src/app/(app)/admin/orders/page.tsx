@@ -46,9 +46,8 @@ export default async function OrdersPage({
   const { month } = await searchParams;
   const { year, monthIndex } = parseMonthParam(month);
 
-  const rangeStart = `${year}-${String(monthIndex + 1).padStart(2, "0")}-01`;
+  const monthParam = monthParamString(year, monthIndex);
   const nextMonthDate = new Date(year, monthIndex + 1, 1);
-  const rangeEnd = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, "0")}-01`;
 
   const prevMonthDate = new Date(year, monthIndex - 1, 1);
   const prevParam = monthParamString(prevMonthDate.getFullYear(), prevMonthDate.getMonth());
@@ -57,15 +56,14 @@ export default async function OrdersPage({
   const supabase = await createClient();
 
   const [{ data: sites }, { data: monthOrders }] = await Promise.all([
-    supabase.from("sites").select("id, name, project_number").order("name"),
+    supabase.from("sites").select("id, name, short_name, project_number").order("name"),
     supabase
       .from("orders")
       .select(
-        "id, order_number, customer_name, work_type, order_date, start_date, handover_date, price, contribution_amount, hours, hourly_rate, peter_invoice_issued, peter_invoice_date, note, site_id, pdf_path, sites(name)"
+        "id, order_number, customer_name, work_type, order_date, display_month, start_date, handover_date, price, contribution_amount, hours, hourly_rate, peter_invoice_issued, peter_invoice_date, note, site_id, pdf_path, sites(name, short_name)"
       )
-      .gte("order_date", rangeStart)
-      .lt("order_date", rangeEnd)
-      .order("order_date", { ascending: false }),
+      .eq("display_month", monthParam)
+      .order("created_at", { ascending: true }),
   ]);
 
   const pdfUrlByOrder = new Map<string, string>();
@@ -113,16 +111,14 @@ export default async function OrdersPage({
       </div>
 
       <div className="card overflow-x-auto p-5">
-        <table className="w-full min-w-[980px] border-collapse">
+        <table className="w-full min-w-[760px] border-collapse">
           <thead>
             <tr className="border-b border-ink-100 text-left text-xs font-medium uppercase tracking-wide text-ink-500">
-              <th className="pb-2 pr-3">Číslo</th>
-              <th className="pb-2 pr-3">Zákazník</th>
-              <th className="pb-2 pr-3">Stavba</th>
-              <th className="pb-2 pr-3">Typ</th>
-              <th className="pb-2 pr-3">Termín</th>
-              <th className="pb-2 pr-3">Cena</th>
-              <th className="pb-2 pr-3">Peter fakturoval</th>
+              <th className="pb-2 pr-2">Číslo</th>
+              <th className="pb-2 pr-2">Stavba</th>
+              <th className="pb-2 pr-2">Termín ukončenia</th>
+              <th className="pb-2 pr-2">Moja faktúra</th>
+              <th className="pb-2 pr-2">Dátum vystavenia</th>
               <th className="pb-2">Akcie</th>
             </tr>
           </thead>
@@ -136,6 +132,7 @@ export default async function OrdersPage({
                   customer_name: o.customer_name,
                   work_type: o.work_type,
                   order_date: o.order_date,
+                  display_month: o.display_month,
                   start_date: o.start_date,
                   handover_date: o.handover_date,
                   price: o.price,
@@ -147,7 +144,7 @@ export default async function OrdersPage({
                   note: o.note,
                   site_id: o.site_id,
                   // @ts-expect-error supabase join shape
-                  siteName: o.sites?.name ?? "bez stavby",
+                  siteName: o.sites?.short_name || o.sites?.name || "bez stavby",
                 }}
                 sites={sites ?? []}
                 pdfUrl={pdfUrlByOrder.get(o.id) ?? null}

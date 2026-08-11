@@ -4,8 +4,8 @@ type Tab = "orders" | "invoices" | "prep" | "import";
 
 const TABS: { key: Tab; href: string; label: string }[] = [
   { key: "orders", href: "/admin/orders", label: "Objednávky" },
-  { key: "invoices", href: "/admin/orders/invoices", label: "Faktúry" },
   { key: "prep", href: "/admin/orders/prep", label: "Podklady pre FA" },
+  { key: "invoices", href: "/admin/orders/invoices", label: "Faktúry" },
   { key: "import", href: "/admin/orders/import", label: "Import faktúr" },
 ];
 
