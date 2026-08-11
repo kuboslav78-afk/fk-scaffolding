@@ -16,7 +16,7 @@ export default async function InvoicePrepPage() {
   const [{ data: orders }, { data: invoices }, { data: contacts }] = await Promise.all([
     supabase
       .from("orders")
-      .select("id, order_number, customer_name, price, order_date, sites(name)")
+      .select("id, order_number, customer_name, price, order_date, peter_invoice_issued, peter_invoice_date, sites(name)")
       .order("order_date", { ascending: false }),
     supabase.from("invoices").select("order_id"),
     supabase.from("email_contacts").select("id, name, email").order("name"),
@@ -30,6 +30,7 @@ export default async function InvoicePrepPage() {
       order_number: o.order_number,
       customer_name: o.customer_name,
       price: o.price,
+      issuedDate: o.peter_invoice_issued ? o.peter_invoice_date : null,
       // @ts-expect-error supabase join shape
       siteName: o.sites?.name ?? "bez stavby",
     }));
@@ -43,7 +44,7 @@ export default async function InvoicePrepPage() {
       <div>
         <h2 className="mb-1 font-semibold text-ink-900">Podklady pre faktúry</h2>
         <p className="text-sm text-ink-500">
-          Vyber objednávky bez faktúry, nastav im dátum splatnosti a priprav email pre účtovníčku.
+          Vyber objednávky bez faktúry, nastav im dátum vystavenia (splatnosť sa dopočíta) a priprav email pre účtovníčku.
         </p>
       </div>
 

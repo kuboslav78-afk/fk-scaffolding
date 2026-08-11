@@ -1,13 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { todayISO, addMonthsISO } from "@/lib/dates";
+import { addMonthsISO } from "@/lib/dates";
 
 type Order = {
   id: string;
   order_number: string | null;
   customer_name: string | null;
   price: number | null;
+  issuedDate: string | null;
   siteName: string;
 };
 
@@ -27,18 +28,19 @@ export function InvoicePrepForm({
   contacts: Contact[];
   adminName: string;
 }) {
-  const today = todayISO();
-  const defaultDueDate = addMonthsISO(today, 1);
-
   const [selected, setSelected] = useState<Record<string, boolean>>({});
-  const [dueDates, setDueDates] = useState<Record<string, string>>(() =>
-    Object.fromEntries(orders.map((o) => [o.id, defaultDueDate]))
+  const [issuedDates, setIssuedDates] = useState<Record<string, string>>(() =>
+    Object.fromEntries(orders.map((o) => [o.id, o.issuedDate ?? ""]))
   );
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
 
+  const dueDates = Object.fromEntries(
+    orders.map((o) => [o.id, issuedDates[o.id] ? addMonthsISO(issuedDates[o.id], 1) : ""])
+  );
+
   const selectedOrders = orders
-    .filter((o) => selected[o.id] && dueDates[o.id])
-    .map((o) => ({ ...o, dueDate: dueDates[o.id] }));
+    .filter((o) => selected[o.id] && issuedDates[o.id])
+    .map((o) => ({ ...o, issuedDate: issuedDates[o.id], dueDate: dueDates[o.id] }));
 
   const selectedContacts = contacts.filter((c) => selectedContactIds.includes(c.id));
 
@@ -49,11 +51,10 @@ export function InvoicePrepForm({
     const subject = "Fakturky podklady";
 
     const greetingName = selectedContacts.length === 1 ? selectedContacts[0].name : null;
-    const todayShort = formatDateShort(today);
 
     const lines = selectedOrders.map(
       (o) =>
-        `Zmluva č. ${o.order_number ?? "-"}   Vystavenie: ${todayShort}   Splatnosť: ${formatDateShort(o.dueDate)}   Cena: ${o.price ?? 0} €`
+        `Zmluva č. ${o.order_number ?? "-"}   Vystavenie: ${formatDateShort(o.issuedDate)}   Splatnosť: ${formatDateShort(o.dueDate)}   Cena: ${o.price ?? 0} €`
     );
 
     const dueDateCounts = new Map<string, number>();
@@ -78,7 +79,7 @@ export function InvoicePrepForm({
       .join("\n");
 
     return `mailto:${encodeURIComponent(to).replace(/%2C/g, ",")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  }, [selectedOrders, selectedContacts, adminName, today]);
+  }, [selectedOrders, selectedContacts, adminName]);
 
   return (
     <div className="space-y-6">
@@ -90,7 +91,8 @@ export function InvoicePrepForm({
               <th className="pb-2 pr-3">Zmluva č.</th>
               <th className="pb-2 pr-3">Zákazník</th>
               <th className="pb-2 pr-3">Cena</th>
-              <th className="pb-2">Dátum splatnosti</th>
+              <th className="pb-2 pr-3">Dátum vystavenia</th>
+              <th className="pb-2">Splatnosť (+1 mesiac)</th>
             </tr>
           </thead>
           <tbody>
@@ -107,18 +109,19 @@ export function InvoicePrepForm({
                 <td className="whitespace-nowrap py-2.5 pr-3 font-medium text-ink-900">{o.order_number ?? "—"}</td>
                 <td className="py-2.5 pr-3 text-ink-700">{o.customer_name ?? "bez zákazníka"}</td>
                 <td className="whitespace-nowrap py-2.5 pr-3 text-ink-900">{o.price != null ? `${o.price} €` : ""}</td>
-                <td className="py-2.5">
+                <td className="py-2.5 pr-3">
                   <input
                     type="date"
-                    value={dueDates[o.id] ?? ""}
+                    value={issuedDates[o.id] ?? ""}
                     onChange={(e) => {
                       const v = e.target.value;
-                      setDueDates((d) => ({ ...d, [o.id]: v }));
+                      setIssuedDates((d) => ({ ...d, [o.id]: v }));
                       if (v) setSelected((s) => ({ ...s, [o.id]: true }));
                     }}
                     className="w-[150px] rounded-lg border border-ink-200 px-1.5 py-1 text-xs"
                   />
                 </td>
+                <td className="py-2.5 text-ink-500">{dueDates[o.id] || "—"}</td>
               </tr>
             ))}
           </tbody>
@@ -166,7 +169,7 @@ export function InvoicePrepForm({
             )}
             {!selectedOrders.length && (
               <p className="mt-2 text-xs text-ink-400">
-                Vyber aspoň jednu objednávku a nastav jej dátum splatnosti.
+                Vyber aspoň jednu objednávku a nastav jej dátum vystavenia.
               </p>
             )}
             {!!selectedOrders.length && !selectedContacts.length && (
