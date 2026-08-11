@@ -1,17 +1,22 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { checkInvoiceImport, commitInvoiceImport, type ImportRow, type CheckedRow } from "@/app/(app)/admin/orders/import/actions";
+import { useRef, useState, useTransition } from "react";
+import {
+  checkInvoiceImport,
+  commitInvoiceImport,
+  parseInvoicePdfsAction,
+  type ImportRow,
+  type CheckedRow,
+} from "@/app/(app)/admin/orders/import/actions";
 import { todayISO } from "@/lib/dates";
 
 function emptyRow(key: string): ImportRow {
-  const today = todayISO();
   return {
     key,
     orderNumber: "",
     invoiceNumber: "",
     amount: 0,
-    peterDate: today,
+    peterDate: todayISO(),
   };
 }
 
@@ -20,6 +25,7 @@ const STATUS_LABEL: Record<CheckedRow["status"], { label: string; className: str
   mismatch: { label: "⚠ nesedí", className: "badge-warning" },
   not_found: { label: "✗ nenájdená", className: "badge-danger" },
   already_invoiced: { label: "✗ už má faktúru", className: "badge-danger" },
+  ambiguous: { label: "⚠ viacero zhôd", className: "badge-warning" },
 };
 
 let rowCounter = 0;
@@ -29,12 +35,13 @@ function nextKey() {
 }
 
 export function ImportInvoicesForm() {
-  const [rows, setRows] = useState<ImportRow[]>(() =>
-    Array.from({ length: 5 }, () => emptyRow(nextKey()))
-  );
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [rows, setRows] = useState<ImportRow[]>([]);
+  const [rowNotes, setRowNotes] = useState<Record<string, string>>({});
   const [checked, setChecked] = useState<CheckedRow[] | null>(null);
   const [result, setResult] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isUploading, setIsUploading] = useState(false);
 
   function updateRow(key: string, patch: Partial<ImportRow>) {
     setChecked(null);
@@ -49,6 +56,48 @@ export function ImportInvoicesForm() {
   function removeRow(key: string) {
     setChecked(null);
     setRows((rs) => rs.filter((r) => r.key !== key));
+    setRowNotes((n) => {
+      const next = { ...n };
+      delete next[key];
+      return next;
+    });
+  }
+
+  async function handleFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || !files.length) return;
+
+    setIsUploading(true);
+    setChecked(null);
+    setResult(null);
+
+    const formData = new FormData();
+    for (const file of Array.from(files)) formData.append("pdfs", file);
+
+    try {
+      const parsed = await parseInvoicePdfsAction(formData);
+      const newRows: ImportRow[] = [];
+      const newNotes: Record<string, string> = {};
+
+      for (const p of parsed) {
+        const key = nextKey();
+        newRows.push({
+          key,
+          orderNumber: p.contractRef ?? "",
+          invoiceNumber: p.invoiceNumber ?? "",
+          amount: p.amount ?? 0,
+          peterDate: p.issuedDate ?? todayISO(),
+        });
+        if (p.error) newNotes[key] = `${p.fileName}: ${p.error}`;
+        else if (!p.contractRef) newNotes[key] = `${p.fileName}: nenašla sa referencia "Z-XXX" — zadaj zmluvu ručne`;
+      }
+
+      setRows((rs) => [...rs, ...newRows]);
+      setRowNotes((n) => ({ ...n, ...newNotes }));
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   }
 
   function handleCheck() {
@@ -67,7 +116,8 @@ export function ImportInvoicesForm() {
       if (res.inserted) {
         setResult(`Uložených ${res.inserted} faktúr.`);
         setChecked(null);
-        setRows(Array.from({ length: 5 }, () => emptyRow(nextKey())));
+        setRows([]);
+        setRowNotes({});
       } else {
         setResult(res.error ? `Chyba: ${res.error}` : "Nič sa neuložilo.");
       }
@@ -79,6 +129,24 @@ export function ImportInvoicesForm() {
 
   return (
     <div className="space-y-4">
+      <div className="card p-5">
+        <label className="label">Nahrať PDF faktúry (viac naraz)</label>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/pdf"
+          multiple
+          onChange={handleFilesSelected}
+          disabled={isUploading}
+          className="block w-full text-sm"
+        />
+        {isUploading && <p className="label mt-1">Načítavam PDF…</p>}
+        <p className="mt-1 text-xs text-ink-400">
+          Systém si sám vytiahne číslo faktúry, sumu, dátum a referenciu na zmluvu (Z-XXX). Riadky bez
+          nájdenej referencie treba doplniť ručne.
+        </p>
+      </div>
+
       <div className="card overflow-x-auto p-5">
         <table className="w-full min-w-[900px] border-collapse">
           <thead>
@@ -95,6 +163,7 @@ export function ImportInvoicesForm() {
           <tbody>
             {rows.map((row) => {
               const rowChecked = checkedByKey.get(row.key);
+              const note = rowNotes[row.key];
               return (
                 <tr key={row.key} className="border-b border-ink-100 align-top text-sm">
                   <td className="py-2 pr-3">
@@ -105,6 +174,7 @@ export function ImportInvoicesForm() {
                       placeholder="napr. 545"
                       className="input w-28"
                     />
+                    {note && <p className="mt-1 max-w-[160px] text-[11px] text-amber-400">{note}</p>}
                   </td>
                   <td className="py-2 pr-3">
                     <input
@@ -179,6 +249,9 @@ export function ImportInvoicesForm() {
             })}
           </tbody>
         </table>
+        {!rows.length && (
+          <p className="py-4 text-sm text-ink-400">Nahraj PDF faktúry vyššie, alebo pridaj riadok ručne.</p>
+        )}
 
         <button type="button" onClick={addRow} className="btn-ghost btn-sm mt-3">
           + Pridať riadok
@@ -186,7 +259,7 @@ export function ImportInvoicesForm() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <button type="button" onClick={handleCheck} disabled={isPending} className="btn-secondary">
+        <button type="button" onClick={handleCheck} disabled={isPending || !rows.length} className="btn-secondary">
           Skontrolovať
         </button>
         {checked && (

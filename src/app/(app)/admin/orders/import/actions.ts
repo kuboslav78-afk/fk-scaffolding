@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/get-profile";
 import { addDaysISO, addMonthsISO } from "@/lib/dates";
+import { parseInvoicePdf } from "@/lib/parse-invoice-pdf";
 
 export type ImportRow = {
   key: string;
@@ -13,7 +14,51 @@ export type ImportRow = {
   peterDate: string;
 };
 
-export type ImportStatus = "ok" | "mismatch" | "not_found" | "already_invoiced";
+export type ParsedInvoiceRow = {
+  fileName: string;
+  invoiceNumber: string | null;
+  contractRef: string | null;
+  amount: number | null;
+  issuedDate: string | null;
+  error: string | null;
+};
+
+export async function parseInvoicePdfsAction(formData: FormData): Promise<ParsedInvoiceRow[]> {
+  const requester = await getProfile();
+  if (requester?.role !== "admin") return [];
+
+  const files = formData.getAll("pdfs").filter((f): f is File => f instanceof File);
+  const results: ParsedInvoiceRow[] = [];
+
+  for (const file of files) {
+    try {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const parsed = await parseInvoicePdf(buffer);
+      results.push({
+        fileName: file.name,
+        invoiceNumber: parsed.invoice_number,
+        contractRef: parsed.contract_ref,
+        amount: parsed.amount,
+        issuedDate: parsed.issued_date,
+        error: null,
+      });
+    } catch (err) {
+      console.error("parseInvoicePdf failed:", file.name, err);
+      results.push({
+        fileName: file.name,
+        invoiceNumber: null,
+        contractRef: null,
+        amount: null,
+        issuedDate: null,
+        error: "Nepodarilo sa prečítať PDF.",
+      });
+    }
+  }
+
+  return results;
+}
+
+export type ImportStatus = "ok" | "mismatch" | "not_found" | "already_invoiced" | "ambiguous";
 
 export type CheckedRow = ImportRow & {
   status: ImportStatus;
@@ -87,14 +132,10 @@ export async function checkInvoiceImport(rows: ImportRow[]): Promise<CheckedRow[
   if (!orderNumbers.length) return [];
 
   const [{ data: orders }, { data: existingInvoices }] = await Promise.all([
-    supabase
-      .from("orders")
-      .select("id, order_number, price, work_type, invoices(id)")
-      .in("order_number", orderNumbers),
+    supabase.from("orders").select("id, order_number, price, work_type, invoices(id)"),
     supabase.from("invoices").select("invoice_number, issued_date"),
   ]);
 
-  const orderMap = new Map((orders ?? []).map((o) => [o.order_number, o]));
   const dates = computeIssuedAndDueDates(rows, existingInvoices ?? []);
 
   return rows.map((row) => {
@@ -103,10 +144,12 @@ export async function checkInvoiceImport(rows: ImportRow[]): Promise<CheckedRow[
       dueDate: addMonthsISO(row.peterDate, 1),
       dateBumped: false,
     };
-    const orderNumber = row.orderNumber.trim();
-    const order = orderMap.get(orderNumber);
+    // "Zmluva č." (napr. "545") sú posledné číslice nemeckého Auftrags-Nr (napr. "202600545") —
+    // párujeme cez zhodu konca čísla, nie presnú zhodu, aby stačilo zadať len krátku referenciu.
+    const ref = row.orderNumber.trim();
+    const matches = (orders ?? []).filter((o) => o.order_number && o.order_number.endsWith(ref));
 
-    if (!order) {
+    if (matches.length === 0) {
       return {
         ...row,
         ...d,
@@ -116,6 +159,19 @@ export async function checkInvoiceImport(rows: ImportRow[]): Promise<CheckedRow[
         message: "Objednávka sa nenašla",
       };
     }
+
+    if (matches.length > 1) {
+      return {
+        ...row,
+        ...d,
+        status: "ambiguous" as const,
+        orderId: null,
+        expectedAmount: null,
+        message: `Viacero objednávok končí na "${ref}" — zadaj celé číslo objednávky`,
+      };
+    }
+
+    const order = matches[0];
 
     if (order.invoices?.length) {
       return {

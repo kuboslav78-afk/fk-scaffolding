@@ -1,5 +1,6 @@
 import "server-only";
 import { PDFParse } from "pdf-parse";
+import { toIsoDate, toNumber, extract } from "./pdf-parse-utils";
 
 export type ParsedOrder = {
   order_number: string | null;
@@ -12,29 +13,6 @@ export type ParsedOrder = {
   handover_date: string | null;
   price: number | null;
 };
-
-function toIsoDate(ddmmyyyy: string): string | null {
-  const match = ddmmyyyy.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-  if (!match) return null;
-  const [, d, m, y] = match;
-  return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
-}
-
-function toNumber(raw: string): number | null {
-  let s = raw.trim();
-  if (s.includes(",") && s.includes(".")) {
-    s = s.replace(/\./g, "").replace(",", ".");
-  } else if (s.includes(",")) {
-    s = s.replace(",", ".");
-  }
-  const n = parseFloat(s);
-  return Number.isFinite(n) ? n : null;
-}
-
-function extract(text: string, pattern: RegExp): string | null {
-  const match = text.match(pattern);
-  return match?.[1]?.trim() || null;
-}
 
 export async function parseOrderPdf(buffer: Buffer): Promise<ParsedOrder> {
   const parser = new PDFParse({ data: buffer });
