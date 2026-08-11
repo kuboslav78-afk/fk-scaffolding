@@ -129,7 +129,7 @@ export function AppShell({
       {/* Desktop sidebar */}
       <aside className="relative z-10 hidden w-60 shrink-0 flex-col border-r border-ink-100 bg-[#141210] md:flex">
         <div className="flex items-center gap-2 px-5 py-5">
-          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-brand-400 to-brand-600 text-xs font-bold text-[#241a06] shadow-[0_0_12px_-2px_rgba(240,162,58,0.6)]">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#ffcf7a] to-[#f0a23a] text-xs font-bold text-[#241a06] shadow-[0_0_16px_-2px_rgba(240,162,58,0.7)]">
             FK
           </span>
           <span className="font-semibold text-ink-900">FK Scaffolding</span>
@@ -149,7 +149,7 @@ export function AppShell({
         {/* Mobile topbar */}
         <div className="flex items-center justify-between border-b border-ink-100 bg-[#141210] px-4 py-3 md:hidden">
           <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-brand-400 to-brand-600 text-xs font-bold text-[#241a06] shadow-[0_0_12px_-2px_rgba(240,162,58,0.6)]">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#ffcf7a] to-[#f0a23a] text-xs font-bold text-[#241a06] shadow-[0_0_16px_-2px_rgba(240,162,58,0.7)]">
               FK
             </span>
             <span className="font-semibold text-ink-900">FK Scaffolding</span>

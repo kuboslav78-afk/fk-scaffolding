@@ -50,7 +50,7 @@ export default function LoginPage() {
             FK
           </span>
           <h1 className="text-xl font-semibold text-[#f2ede2]">FK Scaffolding</h1>
-          <p className="text-sm text-[#9a9186]">Prihlásenie zamestnanca — nočná zmena</p>
+          <p className="text-sm text-[#9a9186]">Prihlásenie do portálu</p>
         </div>
 
         <div className="space-y-1">
