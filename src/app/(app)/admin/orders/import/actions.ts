@@ -132,10 +132,11 @@ export async function checkInvoiceImport(rows: ImportRow[]): Promise<CheckedRow[
   if (!orderNumbers.length) return [];
 
   const [{ data: orders }, { data: existingInvoices }] = await Promise.all([
-    supabase.from("orders").select("id, order_number, price, work_type, invoices(id)"),
+    supabase.from("orders").select("id, order_number, price, work_type"),
     supabase.from("invoices").select("invoice_number, issued_date"),
   ]);
 
+  const existingInvoiceNumbers = new Set((existingInvoices ?? []).map((i) => i.invoice_number));
   const dates = computeIssuedAndDueDates(rows, existingInvoices ?? []);
 
   return rows.map((row) => {
@@ -173,17 +174,18 @@ export async function checkInvoiceImport(rows: ImportRow[]): Promise<CheckedRow[
 
     const order = matches[0];
 
-    if (order.invoices?.length) {
+    if (row.invoiceNumber.trim() && existingInvoiceNumbers.has(row.invoiceNumber.trim())) {
       return {
         ...row,
         ...d,
         status: "already_invoiced" as const,
         orderId: order.id,
         expectedAmount: null,
-        message: "Objednávka už má faktúru",
+        message: "Faktúra s týmto číslom už existuje",
       };
     }
 
+    // jedna objednávka môže mať viac faktúr (postupná fakturácia) — nekontrolujeme, či už nejakú má
     const expected =
       order.work_type === "hodiny" || order.price == null ? null : Math.round(order.price * 0.8 * 100) / 100;
 
