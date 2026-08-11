@@ -143,7 +143,7 @@ export function EditableOrderRow({
           <span className="ml-1.5 text-xs text-ink-400">{order.customer_name.split(" ")[0]}</span>
         )}
       </td>
-      <td className="max-w-[130px] truncate py-2.5 pr-2 text-ink-700">{order.siteName}</td>
+      <td className="truncate overflow-hidden py-2.5 pr-2 text-ink-700">{order.siteName}</td>
       <td className="whitespace-nowrap py-2.5 pr-2 text-ink-500">
         {order.handover_date ? formatDateSK(order.handover_date) : "—"}
       </td>

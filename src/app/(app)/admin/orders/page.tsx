@@ -111,7 +111,15 @@ export default async function OrdersPage({
       </div>
 
       <div className="card overflow-x-auto p-5">
-        <table className="w-full min-w-[760px] border-collapse">
+        <table className="w-full min-w-[760px] table-fixed border-collapse">
+          <colgroup>
+            <col className="w-[120px]" />
+            <col className="w-[140px]" />
+            <col className="w-[110px]" />
+            <col className="w-[100px]" />
+            <col className="w-[180px]" />
+            <col />
+          </colgroup>
           <thead>
             <tr className="border-b border-ink-100 text-left text-xs font-medium uppercase tracking-wide text-ink-500">
               <th className="pb-2 pr-2">Číslo</th>

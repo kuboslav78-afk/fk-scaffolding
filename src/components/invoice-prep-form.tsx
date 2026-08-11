@@ -121,7 +121,7 @@ export function InvoicePrepForm({
                     className="w-[150px] rounded-lg border border-ink-200 px-1.5 py-1 text-xs"
                   />
                 </td>
-                <td className="py-2.5 text-ink-500">{dueDates[o.id] || "—"}</td>
+                <td className="py-2.5 text-ink-500">{dueDates[o.id] ? formatDateShort(dueDates[o.id]) : "—"}</td>
               </tr>
             ))}
           </tbody>
