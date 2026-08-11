@@ -2,14 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { updateInvoice, deleteInvoice, toggleInvoiceFlag } from "@/app/(app)/admin/orders/actions";
+import { addMonthsISO } from "@/lib/dates";
 
 const TABLE_COLS = 7;
-
-function addDays(dateStr: string, days: number) {
-  const d = new Date(dateStr + "T00:00:00");
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
 
 type Invoice = {
   id: string;
@@ -22,11 +17,33 @@ type Invoice = {
   orderLabel: string;
 };
 
-export function EditableInvoiceRow({ invoice }: { invoice: Invoice }) {
+export function EditableInvoiceRow({
+  invoice,
+  peterEmail,
+}: {
+  invoice: Invoice;
+  peterEmail: string | null;
+}) {
   const [editing, setEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [issuedDate, setIssuedDate] = useState(invoice.issued_date);
-  const [dueDate, setDueDate] = useState(invoice.due_date ?? addDays(invoice.issued_date, 30));
+  const [dueDate, setDueDate] = useState(invoice.due_date ?? addMonthsISO(invoice.issued_date, 1));
+
+  const mailtoHref = peterEmail
+    ? `mailto:${encodeURIComponent(peterEmail)}?subject=${encodeURIComponent(
+        `Faktúra ${invoice.invoice_number}`
+      )}&body=${encodeURIComponent(
+        [
+          `Faktúra č. ${invoice.invoice_number}`,
+          `Objednávka: ${invoice.orderLabel}`,
+          `Suma: ${invoice.amount} €`,
+          `Vystavená: ${invoice.issued_date}`,
+          invoice.due_date ? `Splatnosť: ${invoice.due_date}` : null,
+        ]
+          .filter(Boolean)
+          .join("\n")
+      )}`
+    : null;
 
   function handleDelete() {
     if (!confirm(`Naozaj zmazať faktúru ${invoice.invoice_number}?`)) return;
@@ -58,7 +75,7 @@ export function EditableInvoiceRow({ invoice }: { invoice: Invoice }) {
                 onChange={(e) => {
                   const nextIssued = e.target.value;
                   setIssuedDate(nextIssued);
-                  setDueDate(addDays(nextIssued, 30));
+                  setDueDate(addMonthsISO(nextIssued, 1));
                 }}
                 required
                 className="input"
@@ -93,11 +110,31 @@ export function EditableInvoiceRow({ invoice }: { invoice: Invoice }) {
       <td className="whitespace-nowrap py-2.5 pr-3 text-ink-500">{invoice.issued_date}</td>
       <td className="whitespace-nowrap py-2.5 pr-3 text-ink-500">{invoice.due_date ?? "—"}</td>
       <td className="whitespace-nowrap py-2.5 pr-3">
-        <form action={toggleInvoiceFlag.bind(null, invoice.id, "sent", !invoice.sent)}>
-          <button type="submit" className={invoice.sent ? "badge-success" : "badge-neutral"}>
-            {invoice.sent ? "odoslaná ✓" : "odoslať"}
-          </button>
-        </form>
+        {invoice.sent ? (
+          <form action={toggleInvoiceFlag.bind(null, invoice.id, "sent", false)}>
+            <button type="submit" className="badge-success">
+              odoslaná ✓
+            </button>
+          </form>
+        ) : mailtoHref ? (
+          <a
+            href={mailtoHref}
+            onClick={() => startTransition(() => toggleInvoiceFlag(invoice.id, "sent", true))}
+            className="badge-neutral"
+          >
+            Poslať Petrovi
+          </a>
+        ) : (
+          <form action={toggleInvoiceFlag.bind(null, invoice.id, "sent", true)}>
+            <button
+              type="submit"
+              className="badge-neutral"
+              title="Nastav kontakt „Peter“ v Podkladoch pre FA"
+            >
+              odoslať
+            </button>
+          </form>
+        )}
       </td>
       <td className="whitespace-nowrap py-2.5">
         <div className="flex flex-wrap gap-2">

@@ -7,6 +7,7 @@ import { AvailabilityDayCard } from "@/components/availability-day-card";
 import { TaskRow } from "@/components/task-row";
 import { addTask } from "./actions";
 import { DAY_NAMES, parseWeekParam, weekParamString, weekDates, adjacentWeekParams } from "@/lib/week";
+import { todayISO } from "@/lib/dates";
 
 export default async function DashboardPage({
   searchParams,
@@ -28,7 +29,7 @@ export default async function DashboardPage({
 
   if (profile.role === "admin") {
     const now = new Date();
-    const today = now.toISOString().slice(0, 10);
+    const today = todayISO();
     const startOfMonth = `${today.slice(0, 7)}-01`;
     const nextMonthDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     const startOfNextMonth = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, "0")}-01`;

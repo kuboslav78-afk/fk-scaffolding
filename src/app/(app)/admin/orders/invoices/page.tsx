@@ -12,13 +12,18 @@ export default async function InvoicesPage() {
 
   const supabase = await createClient();
 
-  const { data: invoices } = await supabase
-    .from("invoices")
-    .select(
-      "id, invoice_number, amount, issued_date, due_date, sent, paid, orders(order_number, customer_name)"
-    )
-    .order("issued_date", { ascending: false })
-    .limit(200);
+  const [{ data: invoices }, { data: contacts }] = await Promise.all([
+    supabase
+      .from("invoices")
+      .select(
+        "id, invoice_number, amount, issued_date, due_date, sent, paid, orders(order_number, customer_name)"
+      )
+      .order("issued_date", { ascending: false })
+      .limit(200),
+    supabase.from("email_contacts").select("name, email"),
+  ]);
+
+  const peterContact = contacts?.find((c) => c.name.toLowerCase().includes("peter"));
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 md:px-8 md:py-8">
@@ -59,6 +64,7 @@ export default async function InvoicesPage() {
                   // @ts-expect-error supabase join shape
                   orderLabel: `${i.orders?.order_number ?? "—"} · ${i.orders?.customer_name ?? "—"}`,
                 }}
+                peterEmail={peterContact?.email ?? null}
               />
             ))}
           </tbody>

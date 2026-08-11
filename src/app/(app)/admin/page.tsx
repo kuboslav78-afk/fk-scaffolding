@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/get-profile";
+import { todayISO } from "@/lib/dates";
 
 export default async function AdminPage() {
   const profile = await getProfile();
@@ -9,7 +10,7 @@ export default async function AdminPage() {
 
   const supabase = await createClient();
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   const startOfMonth = `${today.slice(0, 7)}-01`;
 
   const [{ data: recentHours }, { data: unpaidInvoices }, { data: monthHours }, { data: allOrders }] =

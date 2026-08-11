@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { createOrder, parseOrderPdfAction } from "@/app/(app)/admin/orders/actions";
+import { todayISO } from "@/lib/dates";
 
 type Site = { id: string; name: string; project_number: string | null };
 
@@ -16,7 +17,7 @@ export function OrderForm({ sites }: { sites: Site[] }) {
   const [siteId, setSiteId] = useState("");
   const [newSiteName, setNewSiteName] = useState("");
   const [projectNumber, setProjectNumber] = useState("");
-  const [orderDate, setOrderDate] = useState(new Date().toISOString().slice(0, 10));
+  const [orderDate, setOrderDate] = useState(todayISO());
   const [startDate, setStartDate] = useState("");
   const [handoverDate, setHandoverDate] = useState("");
   const [price, setPrice] = useState("");

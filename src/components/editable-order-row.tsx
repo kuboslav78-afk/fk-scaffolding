@@ -7,6 +7,7 @@ import {
   unmarkPeterInvoiceIssued,
 } from "@/app/(app)/admin/orders/actions";
 import { DeleteOrderButton } from "@/components/delete-order-button";
+import { todayISO } from "@/lib/dates";
 
 const WORK_TYPE_LABELS: Record<string, string> = {
   montaz: "Montáž",
@@ -48,7 +49,7 @@ export function EditableOrderRow({
 }) {
   const [editing, setEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [peterDate, setPeterDate] = useState(new Date().toISOString().slice(0, 10));
+  const [peterDate, setPeterDate] = useState(todayISO());
 
   if (editing) {
     return (

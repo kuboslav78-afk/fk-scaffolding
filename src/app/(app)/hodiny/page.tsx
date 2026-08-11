@@ -5,6 +5,7 @@ import { getProfile } from "@/lib/get-profile";
 import { addWorkHours, addDiaryEntry, approveWorkHours } from "./actions";
 import { EditableHourRow } from "@/components/editable-hour-row";
 import { EditableDiaryRow } from "@/components/editable-diary-row";
+import { todayISO } from "@/lib/dates";
 
 export default async function HodinyPage() {
   const profile = await getProfile();
@@ -131,7 +132,7 @@ export default async function HodinyPage() {
                 type="date"
                 name="work_date"
                 required
-                defaultValue={new Date().toISOString().slice(0, 10)}
+                defaultValue={todayISO()}
                 className="input"
               />
               <input
@@ -189,7 +190,7 @@ export default async function HodinyPage() {
                 type="date"
                 name="entry_date"
                 required
-                defaultValue={new Date().toISOString().slice(0, 10)}
+                defaultValue={todayISO()}
                 className="input"
               />
               <select name="site_id" required defaultValue="" className="input">

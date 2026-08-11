@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/get-profile";
 import { MONTH_NAMES, parseMonthParam, monthRange, calendarGrid } from "@/lib/month";
 import { DAY_NAMES_SHORT } from "@/lib/week";
+import { todayISO } from "@/lib/dates";
 
 export default async function DiaryCalendarPage({
   params,
@@ -40,7 +41,7 @@ export default async function DiaryCalendarPage({
     entryCountByDate.set(e.entry_date, (entryCountByDate.get(e.entry_date) ?? 0) + 1);
   }
   const weeks = calendarGrid(year, monthIndex);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 md:px-8 md:py-8">

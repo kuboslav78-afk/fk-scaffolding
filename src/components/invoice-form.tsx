@@ -2,12 +2,7 @@
 
 import { useState } from "react";
 import { createInvoice } from "@/app/(app)/admin/orders/actions";
-
-function addDays(dateStr: string, days: number) {
-  const d = new Date(dateStr + "T00:00:00");
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
+import { todayISO, addMonthsISO } from "@/lib/dates";
 
 type Order = {
   id: string;
@@ -21,9 +16,9 @@ export function InvoiceForm({ orders }: { orders: Order[] }) {
   const [amount, setAmount] = useState("");
   const [basePrice, setBasePrice] = useState<number | null>(null);
   const [applyPeterCut, setApplyPeterCut] = useState(false);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   const [issuedDate, setIssuedDate] = useState(today);
-  const [dueDate, setDueDate] = useState(addDays(today, 30));
+  const [dueDate, setDueDate] = useState(addMonthsISO(today, 1));
 
   function computeAmount(price: number | null, applyCut: boolean) {
     if (price == null) return "";
@@ -104,7 +99,7 @@ export function InvoiceForm({ orders }: { orders: Order[] }) {
             onChange={(e) => {
               const next = e.target.value;
               setIssuedDate(next);
-              setDueDate(addDays(next, 30));
+              setDueDate(addMonthsISO(next, 1));
             }}
             className="input"
           />
