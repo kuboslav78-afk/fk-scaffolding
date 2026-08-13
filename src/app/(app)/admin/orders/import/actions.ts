@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile } from "@/lib/get-profile";
 import { addDaysISO, addMonthsISO } from "@/lib/dates";
 import { parseInvoicePdf } from "@/lib/parse-invoice-pdf";
@@ -12,6 +13,7 @@ export type ImportRow = {
   invoiceNumber: string;
   amount: number;
   peterDate: string;
+  pdfPath: string | null;
 };
 
 export type ParsedInvoiceRow = {
@@ -20,6 +22,7 @@ export type ParsedInvoiceRow = {
   contractRef: string | null;
   amount: number | null;
   issuedDate: string | null;
+  pdfPath: string | null;
   error: string | null;
 };
 
@@ -29,17 +32,30 @@ export async function parseInvoicePdfsAction(formData: FormData): Promise<Parsed
 
   const files = formData.getAll("pdfs").filter((f): f is File => f instanceof File);
   const results: ParsedInvoiceRow[] = [];
+  const admin = createAdminClient();
 
   for (const file of files) {
     try {
       const buffer = Buffer.from(await file.arrayBuffer());
       const parsed = await parseInvoicePdf(buffer);
+
+      const safeName = file.name
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `${Date.now()}-${safeName}`;
+      const { error: uploadError } = await admin.storage.from("invoice-pdfs").upload(path, buffer, {
+        contentType: "application/pdf",
+      });
+      if (uploadError) console.error("invoice pdf upload failed:", file.name, uploadError);
+
       results.push({
         fileName: file.name,
         invoiceNumber: parsed.invoice_number,
         contractRef: parsed.contract_ref,
         amount: parsed.amount,
         issuedDate: parsed.issued_date,
+        pdfPath: uploadError ? null : path,
         error: null,
       });
     } catch (err) {
@@ -50,6 +66,7 @@ export async function parseInvoicePdfsAction(formData: FormData): Promise<Parsed
         contractRef: null,
         amount: null,
         issuedDate: null,
+        pdfPath: null,
         error: "Nepodarilo sa prečítať PDF.",
       });
     }
@@ -217,6 +234,7 @@ export async function commitInvoiceImport(rows: CheckedRow[]) {
       amount: r.amount,
       issued_date: r.issuedDate,
       due_date: r.dueDate,
+      pdf_path: r.pdfPath,
       created_by: requester.id,
     }));
 

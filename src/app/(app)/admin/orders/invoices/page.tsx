@@ -16,7 +16,7 @@ export default async function InvoicesPage() {
     supabase
       .from("invoices")
       .select(
-        "id, invoice_number, amount, issued_date, due_date, sent, paid, orders(order_number, customer_name)"
+        "id, invoice_number, amount, issued_date, due_date, sent, paid, pdf_path, orders(order_number, customer_name)"
       )
       .order("issued_date", { ascending: false })
       .limit(200),
@@ -61,6 +61,7 @@ export default async function InvoicesPage() {
                   due_date: i.due_date,
                   sent: i.sent,
                   paid: i.paid,
+                  hasPdf: !!i.pdf_path,
                   // @ts-expect-error supabase join shape
                   orderLabel: `${i.orders?.order_number ?? "—"} · ${i.orders?.customer_name ?? "—"}`,
                 }}

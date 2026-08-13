@@ -17,6 +17,7 @@ function emptyRow(key: string): ImportRow {
     invoiceNumber: "",
     amount: 0,
     peterDate: todayISO(),
+    pdfPath: null,
   };
 }
 
@@ -87,6 +88,7 @@ export function ImportInvoicesForm() {
           invoiceNumber: p.invoiceNumber ?? "",
           amount: p.amount ?? 0,
           peterDate: p.issuedDate ?? todayISO(),
+          pdfPath: p.pdfPath,
         });
         if (p.error) newNotes[key] = `${p.fileName}: ${p.error}`;
         else if (!p.contractRef) newNotes[key] = `${p.fileName}: nenašla sa referencia "Z-XXX" — zadaj zmluvu ručne`;

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile } from "@/lib/get-profile";
 import { parseOrderPdf } from "@/lib/parse-order-pdf";
+import { getResendClient, RESEND_FROM_EMAIL } from "@/lib/resend";
 
 async function uploadOrderPdf(orderId: string, pdf: File) {
   const admin = createAdminClient();
@@ -131,6 +132,58 @@ export async function toggleInvoiceFlag(id: string, field: "sent" | "paid", valu
 
   revalidatePath("/admin/orders");
   revalidatePath("/admin/orders/invoices");
+}
+
+export async function sendInvoiceToPeter(invoiceId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const requester = await getProfile();
+  if (requester?.role !== "admin") return { ok: false, error: "Nemáš oprávnenie." };
+
+  const supabase = await createClient();
+  const { data: invoice } = await supabase
+    .from("invoices")
+    .select("id, invoice_number, amount, issued_date, due_date, pdf_path, orders(order_number, customer_name)")
+    .eq("id", invoiceId)
+    .single();
+
+  if (!invoice) return { ok: false, error: "Faktúra sa nenašla." };
+  if (!invoice.pdf_path) return { ok: false, error: "K tejto faktúre nie je archivované PDF (bola pridaná ručne)." };
+
+  const { data: contacts } = await supabase.from("email_contacts").select("name, email");
+  const peter = contacts?.find((c) => c.name.toLowerCase().includes("peter"));
+  if (!peter) return { ok: false, error: 'Nie je nastavený kontakt "Peter" (Podklady pre FA → Kontakty).' };
+
+  const resend = getResendClient();
+  if (!resend) return { ok: false, error: "RESEND_API_KEY nie je nastavený." };
+
+  const admin = createAdminClient();
+  const { data: fileData, error: downloadError } = await admin.storage.from("invoice-pdfs").download(invoice.pdf_path);
+  if (downloadError || !fileData) return { ok: false, error: "PDF sa nepodarilo stiahnuť zo storage." };
+
+  const buffer = Buffer.from(await fileData.arrayBuffer());
+  // @ts-expect-error supabase join shape
+  const orderLabel = `${invoice.orders?.order_number ?? "—"} · ${invoice.orders?.customer_name ?? "—"}`;
+
+  const { error: sendError } = await resend.emails.send({
+    from: RESEND_FROM_EMAIL,
+    to: peter.email,
+    subject: `Faktúra ${invoice.invoice_number}`,
+    text: [
+      `Faktúra č. ${invoice.invoice_number}`,
+      `Objednávka: ${orderLabel}`,
+      `Suma: ${invoice.amount} €`,
+      `Vystavená: ${invoice.issued_date}`,
+      invoice.due_date ? `Splatnosť: ${invoice.due_date}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    attachments: [{ filename: `Faktura_${invoice.invoice_number}.pdf`, content: buffer }],
+  });
+
+  if (sendError) return { ok: false, error: sendError.message };
+
+  await supabase.from("invoices").update({ sent: true }).eq("id", invoiceId);
+  revalidatePath("/admin/orders/invoices");
+  return { ok: true };
 }
 
 export async function markPeterInvoiceIssued(orderId: string, date: string) {

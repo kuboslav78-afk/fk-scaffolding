@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateInvoice, deleteInvoice, toggleInvoiceFlag } from "@/app/(app)/admin/orders/actions";
+import {
+  updateInvoice,
+  deleteInvoice,
+  toggleInvoiceFlag,
+  sendInvoiceToPeter,
+} from "@/app/(app)/admin/orders/actions";
 import { addMonthsISO } from "@/lib/dates";
 
 const TABLE_COLS = 7;
@@ -14,6 +19,7 @@ type Invoice = {
   due_date: string | null;
   sent: boolean;
   paid: boolean;
+  hasPdf: boolean;
   orderLabel: string;
 };
 
@@ -28,6 +34,15 @@ export function EditableInvoiceRow({
   const [isPending, startTransition] = useTransition();
   const [issuedDate, setIssuedDate] = useState(invoice.issued_date);
   const [dueDate, setDueDate] = useState(invoice.due_date ?? addMonthsISO(invoice.issued_date, 1));
+  const [sendError, setSendError] = useState<string | null>(null);
+
+  function handleSendPdf() {
+    setSendError(null);
+    startTransition(async () => {
+      const res = await sendInvoiceToPeter(invoice.id);
+      if (!res.ok) setSendError(res.error);
+    });
+  }
 
   const mailtoHref = peterEmail
     ? `mailto:${encodeURIComponent(peterEmail)}?subject=${encodeURIComponent(
@@ -116,6 +131,10 @@ export function EditableInvoiceRow({
               odoslaná ✓
             </button>
           </form>
+        ) : invoice.hasPdf ? (
+          <button type="button" onClick={handleSendPdf} disabled={isPending} className="badge-neutral">
+            {isPending ? "odosielam…" : "Poslať Petrovi (PDF)"}
+          </button>
         ) : mailtoHref ? (
           <a
             href={mailtoHref}
@@ -135,6 +154,7 @@ export function EditableInvoiceRow({
             </button>
           </form>
         )}
+        {sendError && <p className="mt-1 max-w-[180px] text-[11px] text-red-400">{sendError}</p>}
       </td>
       <td className="whitespace-nowrap py-2.5">
         <div className="flex flex-wrap gap-2">
