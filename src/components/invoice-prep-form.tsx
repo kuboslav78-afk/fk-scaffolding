@@ -19,6 +19,14 @@ function formatDateShort(iso: string) {
   return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
 }
 
+function shortRef(orderNumber: string | null) {
+  return orderNumber ? orderNumber.slice(-3) : "-";
+}
+
+function padCol(value: string, width: number) {
+  return value.length >= width ? value + " " : value.padEnd(width, " ");
+}
+
 export function InvoicePrepForm({
   orders,
   contacts,
@@ -52,10 +60,25 @@ export function InvoicePrepForm({
 
     const greetingName = selectedContacts.length === 1 ? selectedContacts[0].name : null;
 
-    const lines = selectedOrders.map(
-      (o) =>
-        `Zmluva č. ${o.order_number ?? "-"}   Vystavenie: ${formatDateShort(o.issuedDate)}   Splatnosť: ${formatDateShort(o.dueDate)}   Cena: ${o.price ?? 0} €`
-    );
+    const columns: { key: "ref" | "issued" | "due" | "price"; label: string }[] = [
+      { key: "ref", label: "Zmluva č." },
+      { key: "issued", label: "Vystavenie" },
+      { key: "due", label: "Splatnosť" },
+      { key: "price", label: "Cena" },
+    ];
+
+    const rows = selectedOrders.map((o) => ({
+      ref: shortRef(o.order_number),
+      issued: formatDateShort(o.issuedDate),
+      due: formatDateShort(o.dueDate),
+      price: `${o.price ?? 0} €`,
+    }));
+
+    const widths = columns.map((c) => Math.max(c.label.length, ...rows.map((r) => r[c.key].length)) + 3);
+
+    const headerLine = columns.map((c, i) => padCol(c.label, widths[i])).join("");
+    const separatorLine = columns.map((_, i) => "-".repeat(widths[i] - 1)).join(" ");
+    const lines = [headerLine, separatorLine, ...rows.map((r) => columns.map((c, i) => padCol(r[c.key], widths[i])).join(""))];
 
     const dueDateCounts = new Map<string, number>();
     selectedOrders.forEach((o) => dueDateCounts.set(o.dueDate, (dueDateCounts.get(o.dueDate) ?? 0) + 1));
