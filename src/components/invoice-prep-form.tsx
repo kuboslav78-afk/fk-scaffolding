@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { addMonthsISO } from "@/lib/dates";
+import { markOrdersPrepSent } from "@/app/(app)/admin/orders/prep/actions";
 
 type Order = {
   id: string;
@@ -10,6 +11,7 @@ type Order = {
   price: number | null;
   issuedDate: string | null;
   siteName: string;
+  prepSent: boolean;
 };
 
 type Contact = { id: string; name: string; email: string };
@@ -41,6 +43,8 @@ export function InvoicePrepForm({
     Object.fromEntries(orders.map((o) => [o.id, o.issuedDate ?? ""]))
   );
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
+  const [justSentIds, setJustSentIds] = useState<string[]>([]);
+  const [, startTransition] = useTransition();
 
   const dueDates = Object.fromEntries(
     orders.map((o) => [o.id, issuedDates[o.id] ? addMonthsISO(issuedDates[o.id], 1) : ""])
@@ -104,6 +108,14 @@ export function InvoicePrepForm({
     return `mailto:${encodeURIComponent(to).replace(/%2C/g, ",")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   }, [selectedOrders, selectedContacts, adminName]);
 
+  function handleSent() {
+    const ids = selectedOrders.map((o) => o.id);
+    setJustSentIds((prev) => [...prev, ...ids]);
+    startTransition(() => {
+      markOrdersPrepSent(ids);
+    });
+  }
+
   return (
     <div className="space-y-6">
       <div className="card overflow-x-auto p-5">
@@ -115,38 +127,52 @@ export function InvoicePrepForm({
               <th className="pb-2 pr-3">Zákazník</th>
               <th className="pb-2 pr-3">Cena</th>
               <th className="pb-2 pr-3">Dátum vystavenia</th>
-              <th className="pb-2">Splatnosť (+1 mesiac)</th>
+              <th className="pb-2 pr-3">Splatnosť (+1 mesiac)</th>
+              <th className="pb-2">Stav</th>
             </tr>
           </thead>
           <tbody>
-            {orders.map((o) => (
-              <tr key={o.id} className="border-b border-ink-100 align-top text-sm">
-                <td className="py-2.5 pr-3">
-                  <input
-                    type="checkbox"
-                    checked={!!selected[o.id]}
-                    onChange={(e) => setSelected((s) => ({ ...s, [o.id]: e.target.checked }))}
-                    className="h-4 w-4 rounded border-ink-200 accent-brand-500"
-                  />
-                </td>
-                <td className="whitespace-nowrap py-2.5 pr-3 font-medium text-ink-900">{o.order_number ?? "—"}</td>
-                <td className="py-2.5 pr-3 text-ink-700">{o.customer_name ?? "bez zákazníka"}</td>
-                <td className="whitespace-nowrap py-2.5 pr-3 text-ink-900">{o.price != null ? `${o.price} €` : ""}</td>
-                <td className="py-2.5 pr-3">
-                  <input
-                    type="date"
-                    value={issuedDates[o.id] ?? ""}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setIssuedDates((d) => ({ ...d, [o.id]: v }));
-                      if (v) setSelected((s) => ({ ...s, [o.id]: true }));
-                    }}
-                    className="w-[150px] rounded-lg border border-ink-200 px-1.5 py-1 text-xs"
-                  />
-                </td>
-                <td className="py-2.5 text-ink-500">{dueDates[o.id] ? formatDateShort(dueDates[o.id]) : "—"}</td>
-              </tr>
-            ))}
+            {orders.map((o) => {
+              const sent = o.prepSent || justSentIds.includes(o.id);
+              return (
+                <tr
+                  key={o.id}
+                  className={
+                    sent
+                      ? "border-b border-ink-100 bg-emerald-500/10 align-top text-sm"
+                      : "border-b border-ink-100 align-top text-sm"
+                  }
+                >
+                  <td className="py-2.5 pr-3">
+                    <input
+                      type="checkbox"
+                      checked={!!selected[o.id]}
+                      onChange={(e) => setSelected((s) => ({ ...s, [o.id]: e.target.checked }))}
+                      className="h-4 w-4 rounded border-ink-200 accent-brand-500"
+                    />
+                  </td>
+                  <td className="whitespace-nowrap py-2.5 pr-3 font-medium text-ink-900">{o.order_number ?? "—"}</td>
+                  <td className="py-2.5 pr-3 text-ink-700">{o.customer_name ?? "bez zákazníka"}</td>
+                  <td className="whitespace-nowrap py-2.5 pr-3 text-ink-900">{o.price != null ? `${o.price} €` : ""}</td>
+                  <td className="py-2.5 pr-3">
+                    <input
+                      type="date"
+                      value={issuedDates[o.id] ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setIssuedDates((d) => ({ ...d, [o.id]: v }));
+                        if (v) setSelected((s) => ({ ...s, [o.id]: true }));
+                      }}
+                      className="w-[150px] rounded-lg border border-ink-200 px-1.5 py-1 text-xs"
+                    />
+                  </td>
+                  <td className="py-2.5 pr-3 text-ink-500">{dueDates[o.id] ? formatDateShort(dueDates[o.id]) : "—"}</td>
+                  <td className="py-2.5">
+                    {sent && <span className="badge-success">✓ Odoslané</span>}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         {!orders.length && (
@@ -182,7 +208,7 @@ export function InvoicePrepForm({
 
           <div className="pt-2">
             {mailtoHref ? (
-              <a href={mailtoHref} className="btn-primary">
+              <a href={mailtoHref} onClick={handleSent} className="btn-primary">
                 Pripraviť email ({selectedOrders.length})
               </a>
             ) : (

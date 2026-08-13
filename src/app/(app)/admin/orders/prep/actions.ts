@@ -29,3 +29,14 @@ export async function deleteContact(id: string) {
   revalidatePath("/admin/orders/prep");
   revalidatePath("/admin/orders/invoices");
 }
+
+export async function markOrdersPrepSent(orderIds: string[]) {
+  const requester = await getProfile();
+  if (requester?.role !== "admin") return;
+  if (!orderIds.length) return;
+
+  const supabase = await createClient();
+  await supabase.from("orders").update({ prep_sent: true }).in("id", orderIds);
+
+  revalidatePath("/admin/orders/prep");
+}

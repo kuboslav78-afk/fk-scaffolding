@@ -16,7 +16,7 @@ export default async function InvoicePrepPage() {
   const [{ data: orders }, { data: invoices }, { data: contacts }] = await Promise.all([
     supabase
       .from("orders")
-      .select("id, order_number, customer_name, price, order_date, peter_invoice_issued, peter_invoice_date, sites(name)")
+      .select("id, order_number, customer_name, price, order_date, peter_invoice_issued, peter_invoice_date, prep_sent, sites(name)")
       .order("order_date", { ascending: false }),
     supabase.from("invoices").select("order_id"),
     supabase.from("email_contacts").select("id, name, email").order("name"),
@@ -31,6 +31,7 @@ export default async function InvoicePrepPage() {
       customer_name: o.customer_name,
       price: o.price,
       issuedDate: o.peter_invoice_issued ? o.peter_invoice_date : null,
+      prepSent: o.prep_sent,
       // @ts-expect-error supabase join shape
       siteName: o.sites?.name ?? "bez stavby",
     }));
