@@ -1,4 +1,5 @@
 import "server-only";
+import "./dommatrix-polyfill";
 import { PDFParse } from "pdf-parse";
 import { toIsoDate, toNumber, extract } from "./pdf-parse-utils";
 

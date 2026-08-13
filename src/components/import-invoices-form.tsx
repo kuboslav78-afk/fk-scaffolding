@@ -96,6 +96,9 @@ export function ImportInvoicesForm() {
 
       setRows((rs) => [...rs, ...newRows]);
       setRowNotes((n) => ({ ...n, ...newNotes }));
+    } catch (err) {
+      console.error("parseInvoicePdfsAction failed:", err);
+      setResult("Nahratie PDF zlyhalo — skús nahrať menej súborov naraz alebo to zopakuj.");
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
