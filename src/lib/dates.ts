@@ -54,3 +54,13 @@ export function formatDateSK(iso: string): string {
   const { y, m, d } = parseISODate(iso);
   return `${d}. ${SK_MONTHS[m - 1]} ${y}`;
 }
+
+/** Nemecké/ISO číslo pracovného týždňa (KW) pre daný dátum. */
+export function isoWeekNumber(iso: string): number {
+  const { y, m, d } = parseISODate(iso);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+}

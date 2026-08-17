@@ -12,6 +12,7 @@ type Order = {
   issuedDate: string | null;
   siteName: string;
   prepSent: boolean;
+  defaultLabel: string;
 };
 
 type Contact = { id: string; name: string; email: string };
@@ -19,10 +20,6 @@ type Contact = { id: string; name: string; email: string };
 function formatDateShort(iso: string) {
   const d = new Date(iso + "T00:00:00");
   return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
-}
-
-function shortRef(orderNumber: string | null) {
-  return orderNumber ? orderNumber.slice(-3) : "-";
 }
 
 function padCol(value: string, width: number) {
@@ -42,6 +39,9 @@ export function InvoicePrepForm({
   const [issuedDates, setIssuedDates] = useState<Record<string, string>>(() =>
     Object.fromEntries(orders.map((o) => [o.id, o.issuedDate ?? ""]))
   );
+  const [labels, setLabels] = useState<Record<string, string>>(() =>
+    Object.fromEntries(orders.map((o) => [o.id, o.defaultLabel]))
+  );
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
   const [justSentIds, setJustSentIds] = useState<string[]>([]);
   const [, startTransition] = useTransition();
@@ -52,7 +52,7 @@ export function InvoicePrepForm({
 
   const selectedOrders = orders
     .filter((o) => selected[o.id] && issuedDates[o.id])
-    .map((o) => ({ ...o, issuedDate: issuedDates[o.id], dueDate: dueDates[o.id] }));
+    .map((o) => ({ ...o, issuedDate: issuedDates[o.id], dueDate: dueDates[o.id], label: labels[o.id] ?? o.defaultLabel }));
 
   const selectedContacts = contacts.filter((c) => selectedContactIds.includes(c.id));
 
@@ -65,14 +65,14 @@ export function InvoicePrepForm({
     const greetingName = selectedContacts.length === 1 ? selectedContacts[0].name : null;
 
     const columns: { key: "ref" | "issued" | "due" | "price"; label: string }[] = [
-      { key: "ref", label: "Zmluva č." },
+      { key: "ref", label: "Popis" },
       { key: "issued", label: "Vystavenie" },
       { key: "due", label: "Splatnosť" },
       { key: "price", label: "Cena" },
     ];
 
     const rows = selectedOrders.map((o) => ({
-      ref: shortRef(o.order_number),
+      ref: o.label || "-",
       issued: formatDateShort(o.issuedDate),
       due: formatDateShort(o.dueDate),
       price: `${(o.invoiceAmount ?? 0).toFixed(2)} €`,
@@ -123,7 +123,7 @@ export function InvoicePrepForm({
           <thead>
             <tr className="border-b border-ink-100 text-left text-xs font-medium uppercase tracking-wide text-ink-500">
               <th className="pb-2 pr-3"></th>
-              <th className="pb-2 pr-3">Zmluva č.</th>
+              <th className="pb-2 pr-3">Popis (Zmluva č.)</th>
               <th className="pb-2 pr-3">Zákazník</th>
               <th className="pb-2 pr-3">Moja faktúra</th>
               <th className="pb-2 pr-3">Dátum vystavenia</th>
@@ -151,7 +151,14 @@ export function InvoicePrepForm({
                       className="h-4 w-4 rounded border-ink-200 accent-brand-500"
                     />
                   </td>
-                  <td className="whitespace-nowrap py-2.5 pr-3 font-medium text-ink-900">{o.order_number ?? "—"}</td>
+                  <td className="py-2.5 pr-3">
+                    <input
+                      type="text"
+                      value={labels[o.id] ?? ""}
+                      onChange={(e) => setLabels((l) => ({ ...l, [o.id]: e.target.value }))}
+                      className="input w-[220px] text-sm"
+                    />
+                  </td>
                   <td className="py-2.5 pr-3 text-ink-700">{o.customer_name ?? "bez zákazníka"}</td>
                   <td className="whitespace-nowrap py-2.5 pr-3 text-ink-900">
                     {o.invoiceAmount != null ? `${o.invoiceAmount.toFixed(2)} €` : ""}

@@ -4,6 +4,7 @@ import { getProfile } from "@/lib/get-profile";
 import { OrdersSubnav } from "@/components/orders-subnav";
 import { InvoicePrepForm } from "@/components/invoice-prep-form";
 import { DeleteContactButton } from "@/components/delete-contact-button";
+import { isoWeekNumber } from "@/lib/dates";
 import { addContact } from "./actions";
 
 export default async function InvoicePrepPage() {
@@ -17,7 +18,7 @@ export default async function InvoicePrepPage() {
     supabase
       .from("orders")
       .select(
-        "id, order_number, customer_name, price, work_type, hours, hourly_rate, order_date, peter_invoice_issued, peter_invoice_date, prep_sent, sites(name)"
+        "id, order_number, customer_name, price, work_type, hours, hourly_rate, order_date, peter_invoice_issued, peter_invoice_date, prep_sent, sites(name, short_name)"
       )
       .order("order_date", { ascending: false }),
     supabase.from("invoices").select("order_id"),
@@ -36,6 +37,14 @@ export default async function InvoicePrepPage() {
         : o.price != null
           ? Math.round(o.price * 0.8 * 100) / 100
           : null;
+      // @ts-expect-error supabase join shape
+      const siteName: string = o.sites?.short_name || o.sites?.name || "bez stavby";
+      const defaultLabel =
+        isHourly && !o.order_number
+          ? `KW ${isoWeekNumber(o.order_date)} — ${siteName} — ${o.hours ?? "?"}h`
+          : o.order_number
+            ? o.order_number.slice(-3)
+            : "";
       return {
         id: o.id,
         order_number: o.order_number,
@@ -43,8 +52,8 @@ export default async function InvoicePrepPage() {
         invoiceAmount,
         issuedDate: o.peter_invoice_issued ? o.peter_invoice_date : null,
         prepSent: o.prep_sent,
-        // @ts-expect-error supabase join shape
-        siteName: o.sites?.name ?? "bez stavby",
+        defaultLabel,
+        siteName,
       };
     });
 

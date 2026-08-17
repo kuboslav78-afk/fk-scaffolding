@@ -45,8 +45,7 @@ export function ImportInvoicesForm() {
   const [isUploading, setIsUploading] = useState(false);
 
   function updateRow(key: string, patch: Partial<ImportRow>) {
-    setChecked(null);
-    setResult(null);
+    setChecked((cs) => (cs ? cs.filter((c) => c.key !== key) : cs));
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
   }
 
@@ -55,7 +54,7 @@ export function ImportInvoicesForm() {
   }
 
   function removeRow(key: string) {
-    setChecked(null);
+    setChecked((cs) => (cs ? cs.filter((c) => c.key !== key) : cs));
     setRows((rs) => rs.filter((r) => r.key !== key));
     setRowNotes((n) => {
       const next = { ...n };
@@ -64,12 +63,38 @@ export function ImportInvoicesForm() {
     });
   }
 
+  /** Skontroluje dané riadky a čisté zhody ("ok") rovno uloží — bez čakania na ďalší klik. */
+  async function checkAndAutoCommit(candidateRows: ImportRow[]) {
+    const filled = candidateRows.filter((r) => r.orderNumber.trim() && r.invoiceNumber.trim() && r.amount > 0);
+    if (!filled.length) return;
+
+    const res = await checkInvoiceImport(filled);
+    const okRows = res.filter((r) => r.status === "ok");
+    const restRows = res.filter((r) => r.status !== "ok");
+
+    if (okRows.length) {
+      const commitRes = await commitInvoiceImport(okRows);
+      const okKeys = new Set(okRows.map((r) => r.key));
+      setRows((rs) => rs.filter((r) => !okKeys.has(r.key)));
+      setChecked((cs) => [...(cs ?? []).filter((c) => !okKeys.has(c.key)), ...restRows]);
+      setResult(
+        `Automaticky uložených ${commitRes.inserted ?? 0} faktúr.` +
+          (restRows.length ? ` ${restRows.length} čaká na ručnú kontrolu.` : "")
+      );
+    } else {
+      setChecked((cs) => {
+        const restKeys = new Set(restRows.map((r) => r.key));
+        return [...(cs ?? []).filter((c) => !restKeys.has(c.key)), ...restRows];
+      });
+      setResult(null);
+    }
+  }
+
   async function handleFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || !files.length) return;
 
     setIsUploading(true);
-    setChecked(null);
     setResult(null);
 
     const formData = new FormData();
@@ -96,6 +121,10 @@ export function ImportInvoicesForm() {
 
       setRows((rs) => [...rs, ...newRows]);
       setRowNotes((n) => ({ ...n, ...newNotes }));
+
+      startTransition(() => {
+        checkAndAutoCommit(newRows);
+      });
     } catch (err) {
       console.error("parseInvoicePdfsAction failed:", err);
       setResult("Nahratie PDF zlyhalo — skús nahrať menej súborov naraz alebo to zopakuj.");
@@ -106,23 +135,20 @@ export function ImportInvoicesForm() {
   }
 
   function handleCheck() {
-    const filled = rows.filter((r) => r.orderNumber.trim() && r.invoiceNumber.trim() && r.amount > 0);
-    if (!filled.length) return;
-    startTransition(async () => {
-      const res = await checkInvoiceImport(filled);
-      setChecked(res);
+    startTransition(() => {
+      checkAndAutoCommit(rows);
     });
   }
 
   function handleCommit() {
-    if (!checked) return;
+    if (!checked?.length) return;
     startTransition(async () => {
       const res = await commitInvoiceImport(checked);
       if (res.inserted) {
+        const savedKeys = new Set(checked.filter((c) => c.status === "ok" || c.status === "mismatch").map((c) => c.key));
         setResult(`Uložených ${res.inserted} faktúr.`);
-        setChecked(null);
-        setRows([]);
-        setRowNotes({});
+        setChecked((cs) => (cs ?? []).filter((c) => !savedKeys.has(c.key)));
+        setRows((rs) => rs.filter((r) => !savedKeys.has(r.key)));
       } else {
         setResult(res.error ? `Chyba: ${res.error}` : "Nič sa neuložilo.");
       }
@@ -130,7 +156,7 @@ export function ImportInvoicesForm() {
   }
 
   const checkedByKey = new Map((checked ?? []).map((c) => [c.key, c]));
-  const savableCount = (checked ?? []).filter((c) => c.status === "ok" || c.status === "mismatch").length;
+  const savableCount = (checked ?? []).filter((c) => c.status === "mismatch").length;
 
   return (
     <div className="space-y-4">
@@ -147,8 +173,8 @@ export function ImportInvoicesForm() {
         />
         {isUploading && <p className="label mt-1">Načítavam PDF…</p>}
         <p className="mt-1 text-xs text-ink-400">
-          Systém si sám vytiahne číslo faktúry, sumu, dátum a referenciu na zmluvu (Z-XXX). Riadky bez
-          nájdenej referencie treba doplniť ručne.
+          Systém si sám vytiahne číslo faktúry, sumu, dátum a referenciu na zmluvu (Z-XXX), rovno skontroluje
+          a čisté zhody uloží do Faktúr. Riadky s nezhodou alebo bez nájdenej referencie zostanú tu na ručnú kontrolu.
         </p>
       </div>
 
