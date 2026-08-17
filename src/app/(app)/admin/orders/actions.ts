@@ -120,33 +120,40 @@ export async function createInvoice(formData: FormData) {
   redirect("/admin/orders/invoices");
 }
 
-export async function toggleInvoiceFlag(id: string, field: "sent" | "paid", value: boolean) {
+export async function toggleInvoiceGroupFlag(ids: string[], field: "sent" | "paid", value: boolean) {
   const requester = await getProfile();
   if (requester?.role !== "admin") return;
+  if (!ids.length) return;
 
   const supabase = await createClient();
   await supabase
     .from("invoices")
     .update({ [field]: value })
-    .eq("id", id);
+    .in("id", ids);
 
   revalidatePath("/admin/orders");
   revalidatePath("/admin/orders/invoices");
 }
 
-export async function sendInvoiceToPeter(invoiceId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+/**
+ * Pošle Petrovi jeden email so všetkými vybranými faktúrami naraz (každá ako samostatná príloha PDF).
+ * Faktúra s viacerými objednávkami (rovnaké invoice_number) má v DB viac riadkov, ale fyzicky je to
+ * jeden dokument — zoskupíme podľa invoice_number, aby sa PDF neposielalo/neoznačovalo duplicitne.
+ */
+export async function sendGroupedInvoicesToPeter(
+  invoiceNumbers: string[]
+): Promise<{ ok: true; sent: number } | { ok: false; error: string }> {
   const requester = await getProfile();
   if (requester?.role !== "admin") return { ok: false, error: "Nemáš oprávnenie." };
+  if (!invoiceNumbers.length) return { ok: false, error: "Nič nie je vybrané." };
 
   const supabase = await createClient();
-  const { data: invoice } = await supabase
+  const { data: rows } = await supabase
     .from("invoices")
     .select("id, invoice_number, amount, issued_date, due_date, pdf_path, orders(order_number, customer_name)")
-    .eq("id", invoiceId)
-    .single();
+    .in("invoice_number", invoiceNumbers);
 
-  if (!invoice) return { ok: false, error: "Faktúra sa nenašla." };
-  if (!invoice.pdf_path) return { ok: false, error: "K tejto faktúre nie je archivované PDF (bola pridaná ručne)." };
+  if (!rows?.length) return { ok: false, error: "Faktúry sa nenašli." };
 
   const { data: contacts } = await supabase.from("email_contacts").select("name, email");
   const peter = contacts?.find((c) => c.name.toLowerCase().includes("peter"));
@@ -155,35 +162,81 @@ export async function sendInvoiceToPeter(invoiceId: string): Promise<{ ok: true 
   const resend = getResendClient();
   if (!resend) return { ok: false, error: "RESEND_API_KEY nie je nastavený." };
 
-  const admin = createAdminClient();
-  const { data: fileData, error: downloadError } = await admin.storage.from("invoice-pdfs").download(invoice.pdf_path);
-  if (downloadError || !fileData) return { ok: false, error: "PDF sa nepodarilo stiahnuť zo storage." };
+  const groups = new Map<
+    string,
+    { ids: string[]; amount: number; issued_date: string; due_date: string | null; pdf_path: string | null; orderLabels: string[] }
+  >();
+  for (const r of rows) {
+    // @ts-expect-error supabase join shape
+    const orderLabel = `${r.orders?.order_number ?? "—"} · ${r.orders?.customer_name ?? "—"}`;
+    const existing = groups.get(r.invoice_number);
+    if (existing) {
+      existing.ids.push(r.id);
+      existing.amount += r.amount;
+      existing.orderLabels.push(orderLabel);
+    } else {
+      groups.set(r.invoice_number, {
+        ids: [r.id],
+        amount: r.amount,
+        issued_date: r.issued_date,
+        due_date: r.due_date,
+        pdf_path: r.pdf_path,
+        orderLabels: [orderLabel],
+      });
+    }
+  }
 
-  const buffer = Buffer.from(await fileData.arrayBuffer());
-  // @ts-expect-error supabase join shape
-  const orderLabel = `${invoice.orders?.order_number ?? "—"} · ${invoice.orders?.customer_name ?? "—"}`;
+  const admin = createAdminClient();
+  const attachments: { filename: string; content: Buffer }[] = [];
+  const summaryLines: string[] = [];
+  const allIds: string[] = [];
+  const skipped: string[] = [];
+
+  for (const [invoiceNumber, g] of groups) {
+    if (!g.pdf_path) {
+      skipped.push(invoiceNumber);
+      continue;
+    }
+    const { data: fileData, error: downloadError } = await admin.storage.from("invoice-pdfs").download(g.pdf_path);
+    if (downloadError || !fileData) {
+      skipped.push(invoiceNumber);
+      continue;
+    }
+    attachments.push({
+      filename: `Faktura_${invoiceNumber}.pdf`,
+      content: Buffer.from(await fileData.arrayBuffer()),
+    });
+    summaryLines.push(
+      `Faktúra ${invoiceNumber} — ${g.orderLabels.join(", ")} — ${g.amount.toFixed(2)} € — splatnosť ${g.due_date ?? "—"}`
+    );
+    allIds.push(...g.ids);
+  }
+
+  if (!attachments.length) {
+    return { ok: false, error: "Žiadna z vybraných faktúr nemá archivované PDF." };
+  }
 
   const { error: sendError } = await resend.emails.send({
     from: RESEND_FROM_EMAIL,
     to: peter.email,
-    subject: `Faktúra ${invoice.invoice_number}`,
+    subject: attachments.length === 1 ? `Faktúra ${[...groups.keys()][0]}` : `Faktúry (${attachments.length})`,
     text: [
-      `Faktúra č. ${invoice.invoice_number}`,
-      `Objednávka: ${orderLabel}`,
-      `Suma: ${invoice.amount} €`,
-      `Vystavená: ${invoice.issued_date}`,
-      invoice.due_date ? `Splatnosť: ${invoice.due_date}` : null,
+      "Posielam faktúry:",
+      "",
+      ...summaryLines,
+      skipped.length ? "" : null,
+      skipped.length ? `Nepodarilo sa pripojiť PDF pre: ${skipped.join(", ")}` : null,
     ]
-      .filter(Boolean)
+      .filter((l) => l !== null)
       .join("\n"),
-    attachments: [{ filename: `Faktura_${invoice.invoice_number}.pdf`, content: buffer }],
+    attachments,
   });
 
   if (sendError) return { ok: false, error: sendError.message };
 
-  await supabase.from("invoices").update({ sent: true }).eq("id", invoiceId);
+  await supabase.from("invoices").update({ sent: true }).in("id", allIds);
   revalidatePath("/admin/orders/invoices");
-  return { ok: true };
+  return { ok: true, sent: attachments.length };
 }
 
 export async function markPeterInvoiceIssued(orderId: string, date: string) {
@@ -231,12 +284,13 @@ export async function updateInvoice(id: string, formData: FormData) {
   revalidatePath("/admin/orders/invoices");
 }
 
-export async function deleteInvoice(id: string) {
+export async function deleteInvoiceGroup(ids: string[]) {
   const requester = await getProfile();
   if (requester?.role !== "admin") return;
+  if (!ids.length) return;
 
   const supabase = await createClient();
-  await supabase.from("invoices").delete().eq("id", id);
+  await supabase.from("invoices").delete().in("id", ids);
 
   revalidatePath("/admin/orders");
   revalidatePath("/admin/orders/invoices");

@@ -3,7 +3,13 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/get-profile";
 import { OrdersSubnav } from "@/components/orders-subnav";
-import { EditableInvoiceRow } from "@/components/editable-invoice-row";
+import { InvoicesTable, type InvoiceGroup } from "@/components/invoices-table";
+
+function contractsLabel(count: number) {
+  if (count === 1) return "1 zmluva";
+  if (count >= 2 && count <= 4) return `${count} zmluvy`;
+  return `${count} zmlúv`;
+}
 
 export default async function InvoicesPage() {
   const profile = await getProfile();
@@ -25,6 +31,47 @@ export default async function InvoicesPage() {
 
   const peterContact = contacts?.find((c) => c.name.toLowerCase().includes("peter"));
 
+  // Jedna fyzická faktúra môže mať viac riadkov v DB (jeden na objednávku) — zoskupíme
+  // podľa čísla faktúry, aby sa v prehľade aj pri odosielaní zobrazovala/posielala len raz.
+  const groupsMap = new Map<string, Omit<InvoiceGroup, "orderLabel">>();
+  for (const i of invoices ?? []) {
+    // @ts-expect-error supabase join shape
+    const orderNumber: string = i.orders?.order_number ?? "—";
+    // @ts-expect-error supabase join shape
+    const customerName: string = i.orders?.customer_name ?? "—";
+    const existing = groupsMap.get(i.invoice_number);
+    if (existing) {
+      existing.ids.push(i.id);
+      existing.amount += i.amount;
+      existing.orderNumbers.push(orderNumber);
+      existing.sent = existing.sent && i.sent;
+      existing.paid = existing.paid && i.paid;
+    } else {
+      groupsMap.set(i.invoice_number, {
+        invoiceNumber: i.invoice_number,
+        ids: [i.id],
+        amount: i.amount,
+        issued_date: i.issued_date,
+        due_date: i.due_date,
+        sent: i.sent,
+        paid: i.paid,
+        hasPdf: !!i.pdf_path,
+        orderNumbers: [orderNumber],
+        customerName,
+      });
+    }
+  }
+
+  const groups = [...groupsMap.values()]
+    .map((g) => ({
+      ...g,
+      orderLabel:
+        g.orderNumbers.length === 1
+          ? `${g.orderNumbers[0]} · ${g.customerName}`
+          : `${contractsLabel(g.orderNumbers.length)} (${g.orderNumbers.join(", ")}) · ${g.customerName}`,
+    }))
+    .sort((a, b) => b.issued_date.localeCompare(a.issued_date));
+
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 md:px-8 md:py-8">
       <div className="flex items-center justify-between">
@@ -36,42 +83,7 @@ export default async function InvoicesPage() {
 
       <OrdersSubnav active="invoices" />
 
-      <div className="card overflow-x-auto p-5">
-        <table className="w-full min-w-[820px] border-collapse">
-          <thead>
-            <tr className="border-b border-ink-100 text-left text-xs font-medium uppercase tracking-wide text-ink-500">
-              <th className="pb-2 pr-3">Číslo</th>
-              <th className="pb-2 pr-3">Objednávka</th>
-              <th className="pb-2 pr-3">Suma</th>
-              <th className="pb-2 pr-3">Vystavená</th>
-              <th className="pb-2 pr-3">Splatnosť</th>
-              <th className="pb-2 pr-3">Odoslaná</th>
-              <th className="pb-2">Akcie</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices?.map((i) => (
-              <EditableInvoiceRow
-                key={i.id}
-                invoice={{
-                  id: i.id,
-                  invoice_number: i.invoice_number,
-                  amount: i.amount,
-                  issued_date: i.issued_date,
-                  due_date: i.due_date,
-                  sent: i.sent,
-                  paid: i.paid,
-                  hasPdf: !!i.pdf_path,
-                  // @ts-expect-error supabase join shape
-                  orderLabel: `${i.orders?.order_number ?? "—"} · ${i.orders?.customer_name ?? "—"}`,
-                }}
-                peterEmail={peterContact?.email ?? null}
-              />
-            ))}
-          </tbody>
-        </table>
-        {!invoices?.length && <p className="py-4 text-sm text-ink-400">Zatiaľ žiadne faktúry.</p>}
-      </div>
+      <InvoicesTable groups={groups} peterEmail={peterContact?.email ?? null} />
     </div>
   );
 }
