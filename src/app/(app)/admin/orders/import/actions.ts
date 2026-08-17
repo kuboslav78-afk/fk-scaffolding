@@ -49,15 +49,30 @@ export async function parseInvoicePdfsAction(formData: FormData): Promise<Parsed
       });
       if (uploadError) console.error("invoice pdf upload failed:", file.name, uploadError);
 
-      results.push({
-        fileName: file.name,
-        invoiceNumber: parsed.invoice_number,
-        contractRef: parsed.contract_ref,
-        amount: parsed.amount,
-        issuedDate: parsed.issued_date,
-        pdfPath: uploadError ? null : path,
-        error: null,
-      });
+      const resolvedPath = uploadError ? null : path;
+      if (parsed.items.length) {
+        for (const item of parsed.items) {
+          results.push({
+            fileName: file.name,
+            invoiceNumber: parsed.invoice_number,
+            contractRef: item.contract_ref,
+            amount: item.amount,
+            issuedDate: parsed.issued_date,
+            pdfPath: resolvedPath,
+            error: null,
+          });
+        }
+      } else {
+        results.push({
+          fileName: file.name,
+          invoiceNumber: parsed.invoice_number,
+          contractRef: null,
+          amount: null,
+          issuedDate: parsed.issued_date,
+          pdfPath: resolvedPath,
+          error: null,
+        });
+      }
     } catch (err) {
       console.error("parseInvoicePdf failed:", file.name, err);
       results.push({
@@ -102,28 +117,38 @@ function computeIssuedAndDueDates(
   rows: ImportRow[],
   existingInvoices: { invoice_number: string; issued_date: string }[]
 ) {
-  type Anchor = { key: number; issuedDate: string; rowKey: string | null };
+  type Anchor = { key: number; issuedDate: string; invoiceNumber: string | null };
+
+  // viac riadkov môže patriť tej istej faktúre (jedna faktúra na viac objednávok) - v časovej osi
+  // ich rátame len raz, aby sa navzájom nebumpovali, a výsledný dátum potom priradíme všetkým.
+  const uniqueByInvoiceNumber = new Map<string, ImportRow>();
+  for (const r of rows) {
+    const num = r.invoiceNumber.trim();
+    if (num && !uniqueByInvoiceNumber.has(num)) uniqueByInvoiceNumber.set(num, r);
+  }
 
   const anchors: Anchor[] = existingInvoices.map((i) => ({
     key: invoiceSortKey(i.invoice_number),
     issuedDate: i.issued_date,
-    rowKey: null,
+    invoiceNumber: null,
   }));
-  const newAnchors: Anchor[] = rows
-    .filter((r) => r.invoiceNumber.trim())
-    .map((r) => ({ key: invoiceSortKey(r.invoiceNumber), issuedDate: "", rowKey: r.key }));
+  const newAnchors: Anchor[] = [...uniqueByInvoiceNumber.entries()].map(([num, r]) => ({
+    key: invoiceSortKey(num),
+    issuedDate: "",
+    invoiceNumber: r.invoiceNumber.trim(),
+  }));
 
   const timeline = [...anchors, ...newAnchors].sort((a, b) => a.key - b.key);
 
-  const result = new Map<string, { issuedDate: string; dueDate: string; dateBumped: boolean }>();
+  const byInvoiceNumber = new Map<string, { issuedDate: string; dueDate: string; dateBumped: boolean }>();
   let runningMax: string | null = null;
 
   for (const item of timeline) {
-    if (item.rowKey === null) {
+    if (item.invoiceNumber === null) {
       if (!runningMax || item.issuedDate > runningMax) runningMax = item.issuedDate;
       continue;
     }
-    const row = rows.find((r) => r.key === item.rowKey)!;
+    const row = uniqueByInvoiceNumber.get(item.invoiceNumber)!;
     const peterDate = row.peterDate;
     let issuedDate = peterDate;
     let dateBumped = false;
@@ -132,8 +157,15 @@ function computeIssuedAndDueDates(
       dateBumped = true;
     }
     const dueDate = addMonthsISO(peterDate, 1);
-    result.set(row.key, { issuedDate, dueDate, dateBumped });
+    byInvoiceNumber.set(item.invoiceNumber, { issuedDate, dueDate, dateBumped });
     if (!runningMax || issuedDate > runningMax) runningMax = issuedDate;
+  }
+
+  const result = new Map<string, { issuedDate: string; dueDate: string; dateBumped: boolean }>();
+  for (const row of rows) {
+    const num = row.invoiceNumber.trim();
+    const computed = num ? byInvoiceNumber.get(num) : undefined;
+    if (computed) result.set(row.key, computed);
   }
 
   return result;
@@ -150,10 +182,13 @@ export async function checkInvoiceImport(rows: ImportRow[]): Promise<CheckedRow[
 
   const [{ data: orders }, { data: existingInvoices }] = await Promise.all([
     supabase.from("orders").select("id, order_number, price, work_type"),
-    supabase.from("invoices").select("invoice_number, issued_date"),
+    supabase.from("invoices").select("invoice_number, issued_date, order_id"),
   ]);
 
-  const existingInvoiceNumbers = new Set((existingInvoices ?? []).map((i) => i.invoice_number));
+  // jedna faktúra môže patriť viacerým objednávkam - duplicita je až dvojica (číslo faktúry + objednávka)
+  const existingInvoiceOrderPairs = new Set(
+    (existingInvoices ?? []).map((i) => `${i.invoice_number}::${i.order_id}`)
+  );
   const dates = computeIssuedAndDueDates(rows, existingInvoices ?? []);
 
   return rows.map((row) => {
@@ -191,18 +226,19 @@ export async function checkInvoiceImport(rows: ImportRow[]): Promise<CheckedRow[
 
     const order = matches[0];
 
-    if (row.invoiceNumber.trim() && existingInvoiceNumbers.has(row.invoiceNumber.trim())) {
+    if (row.invoiceNumber.trim() && existingInvoiceOrderPairs.has(`${row.invoiceNumber.trim()}::${order.id}`)) {
       return {
         ...row,
         ...d,
         status: "already_invoiced" as const,
         orderId: order.id,
         expectedAmount: null,
-        message: "Faktúra s týmto číslom už existuje",
+        message: "Táto faktúra už bola pre túto objednávku importovaná",
       };
     }
 
-    // jedna objednávka môže mať viac faktúr (postupná fakturácia) — nekontrolujeme, či už nejakú má
+    // jedna objednávka môže mať viac faktúr a jedna faktúra viac objednávok — nekontrolujeme,
+    // či objednávka už nejakú faktúru má, len či presne táto dvojica faktúra+objednávka nie je duplicitná
     const expected =
       order.work_type === "hodiny" || order.price == null ? null : Math.round(order.price * 0.8 * 100) / 100;
 

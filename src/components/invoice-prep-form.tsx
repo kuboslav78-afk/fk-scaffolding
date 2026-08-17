@@ -8,7 +8,7 @@ type Order = {
   id: string;
   order_number: string | null;
   customer_name: string | null;
-  price: number | null;
+  invoiceAmount: number | null;
   issuedDate: string | null;
   siteName: string;
   prepSent: boolean;
@@ -75,7 +75,7 @@ export function InvoicePrepForm({
       ref: shortRef(o.order_number),
       issued: formatDateShort(o.issuedDate),
       due: formatDateShort(o.dueDate),
-      price: `${o.price ?? 0} €`,
+      price: `${(o.invoiceAmount ?? 0).toFixed(2)} €`,
     }));
 
     const widths = columns.map((c) => Math.max(c.label.length, ...rows.map((r) => r[c.key].length)) + 3);
@@ -125,7 +125,7 @@ export function InvoicePrepForm({
               <th className="pb-2 pr-3"></th>
               <th className="pb-2 pr-3">Zmluva č.</th>
               <th className="pb-2 pr-3">Zákazník</th>
-              <th className="pb-2 pr-3">Cena</th>
+              <th className="pb-2 pr-3">Moja faktúra</th>
               <th className="pb-2 pr-3">Dátum vystavenia</th>
               <th className="pb-2 pr-3">Splatnosť (+1 mesiac)</th>
               <th className="pb-2">Stav</th>
@@ -153,7 +153,9 @@ export function InvoicePrepForm({
                   </td>
                   <td className="whitespace-nowrap py-2.5 pr-3 font-medium text-ink-900">{o.order_number ?? "—"}</td>
                   <td className="py-2.5 pr-3 text-ink-700">{o.customer_name ?? "bez zákazníka"}</td>
-                  <td className="whitespace-nowrap py-2.5 pr-3 text-ink-900">{o.price != null ? `${o.price} €` : ""}</td>
+                  <td className="whitespace-nowrap py-2.5 pr-3 text-ink-900">
+                    {o.invoiceAmount != null ? `${o.invoiceAmount.toFixed(2)} €` : ""}
+                  </td>
                   <td className="py-2.5 pr-3">
                     <input
                       type="date"

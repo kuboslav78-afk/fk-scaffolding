@@ -16,7 +16,9 @@ export default async function InvoicePrepPage() {
   const [{ data: orders }, { data: invoices }, { data: contacts }] = await Promise.all([
     supabase
       .from("orders")
-      .select("id, order_number, customer_name, price, order_date, peter_invoice_issued, peter_invoice_date, prep_sent, sites(name)")
+      .select(
+        "id, order_number, customer_name, price, work_type, hours, hourly_rate, order_date, peter_invoice_issued, peter_invoice_date, prep_sent, sites(name)"
+      )
       .order("order_date", { ascending: false }),
     supabase.from("invoices").select("order_id"),
     supabase.from("email_contacts").select("id, name, email").order("name"),
@@ -25,16 +27,26 @@ export default async function InvoicePrepPage() {
   const invoicedOrderIds = new Set((invoices ?? []).map((i) => i.order_id));
   const uninvoicedOrders = (orders ?? [])
     .filter((o) => !invoicedOrderIds.has(o.id))
-    .map((o) => ({
-      id: o.id,
-      order_number: o.order_number,
-      customer_name: o.customer_name,
-      price: o.price,
-      issuedDate: o.peter_invoice_issued ? o.peter_invoice_date : null,
-      prepSent: o.prep_sent,
-      // @ts-expect-error supabase join shape
-      siteName: o.sites?.name ?? "bez stavby",
-    }));
+    .map((o) => {
+      const isHourly = o.work_type === "hodiny";
+      const invoiceAmount = isHourly
+        ? o.hours != null && o.hourly_rate != null
+          ? o.hours * o.hourly_rate
+          : o.price
+        : o.price != null
+          ? Math.round(o.price * 0.8 * 100) / 100
+          : null;
+      return {
+        id: o.id,
+        order_number: o.order_number,
+        customer_name: o.customer_name,
+        invoiceAmount,
+        issuedDate: o.peter_invoice_issued ? o.peter_invoice_date : null,
+        prepSent: o.prep_sent,
+        // @ts-expect-error supabase join shape
+        siteName: o.sites?.name ?? "bez stavby",
+      };
+    });
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 md:px-8 md:py-8">
