@@ -4,8 +4,10 @@ import { PDFParse } from "pdf-parse";
 import { toIsoDate, toNumber, extract } from "./pdf-parse-utils";
 
 export type ParsedInvoiceItem = {
-  /** Posledné 3 číslice nemeckého Auftrags-Nr. (napr. "545"), z položky "Z-545" na faktúre. */
-  contract_ref: string;
+  /** Posledné 3 číslice nemeckého Auftrags-Nr. (napr. "545"), z položky "Z-545" na faktúre. Null pri hodinovke. */
+  contract_ref: string | null;
+  /** Text položky pri hodinovke (napr. "Berg am lain"), keď nie je Z-XXX referencia — párujeme podľa názvu stavby. */
+  site_label: string | null;
   amount: number;
 };
 
@@ -24,6 +26,13 @@ export type ParsedInvoice = {
  */
 const LINE_ITEM_RE = /Z-(\d+)\s+\d+%\s+[0-9][0-9\s]*,\d{2}\s+([0-9][0-9\s]*,\d{2})/g;
 
+/**
+ * Hodinovka nemá Z-XXX referenciu, riadok má tvar "Berg am lain hod. 0% 0,00 3 016,00 3 016,00 26,00 116" -
+ * názov stavby, sadzba DPH, DPH suma, celková cena (2x), jednotková cena, počet hodín.
+ */
+const HOURLY_ITEM_RE =
+  /([^\d\n\t]+?)\s+hod\.\s+\d+%\s+[0-9][0-9\s]*,\d{2}\s+([0-9][0-9\s]*,\d{2})\s*\t[0-9][0-9\s]*,\d{2}\s*\t[0-9][0-9\s]*,\d{2}\s*\t\d+/g;
+
 export async function parseInvoicePdf(buffer: Buffer): Promise<ParsedInvoice> {
   const parser = new PDFParse({ data: buffer });
   const result = await parser.getText();
@@ -36,7 +45,11 @@ export async function parseInvoicePdf(buffer: Buffer): Promise<ParsedInvoice> {
   const items: ParsedInvoiceItem[] = [];
   for (const m of text.matchAll(LINE_ITEM_RE)) {
     const amount = toNumber(m[2]);
-    if (amount != null) items.push({ contract_ref: m[1], amount });
+    if (amount != null) items.push({ contract_ref: m[1], site_label: null, amount });
+  }
+  for (const m of text.matchAll(HOURLY_ITEM_RE)) {
+    const amount = toNumber(m[2]);
+    if (amount != null) items.push({ contract_ref: null, site_label: m[1].trim(), amount });
   }
 
   return {

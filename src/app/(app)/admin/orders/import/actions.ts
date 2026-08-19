@@ -14,14 +14,18 @@ export type ImportRow = {
   amount: number;
   peterDate: string;
   pdfPath: string | null;
+  /** Skutočný dátum splatnosti vytlačený na faktúre — ak je, použije sa namiesto dopočítaného +1 mesiac. */
+  pdfDueDate: string | null;
 };
 
 export type ParsedInvoiceRow = {
   fileName: string;
   invoiceNumber: string | null;
   contractRef: string | null;
+  siteLabel: string | null;
   amount: number | null;
   issuedDate: string | null;
+  dueDate: string | null;
   pdfPath: string | null;
   error: string | null;
 };
@@ -56,8 +60,10 @@ export async function parseInvoicePdfsAction(formData: FormData): Promise<Parsed
             fileName: file.name,
             invoiceNumber: parsed.invoice_number,
             contractRef: item.contract_ref,
+            siteLabel: item.site_label,
             amount: item.amount,
             issuedDate: parsed.issued_date,
+            dueDate: parsed.due_date,
             pdfPath: resolvedPath,
             error: null,
           });
@@ -67,8 +73,10 @@ export async function parseInvoicePdfsAction(formData: FormData): Promise<Parsed
           fileName: file.name,
           invoiceNumber: parsed.invoice_number,
           contractRef: null,
+          siteLabel: null,
           amount: null,
           issuedDate: parsed.issued_date,
+          dueDate: parsed.due_date,
           pdfPath: resolvedPath,
           error: null,
         });
@@ -79,8 +87,10 @@ export async function parseInvoicePdfsAction(formData: FormData): Promise<Parsed
         fileName: file.name,
         invoiceNumber: null,
         contractRef: null,
+        siteLabel: null,
         amount: null,
         issuedDate: null,
+        dueDate: null,
         pdfPath: null,
         error: "Nepodarilo sa prečítať PDF.",
       });
@@ -156,7 +166,9 @@ function computeIssuedAndDueDates(
       issuedDate = addDaysISO(runningMax, 1);
       dateBumped = true;
     }
-    const dueDate = addMonthsISO(peterDate, 1);
+    // Ak vieme skutočný dátum splatnosti priamo z PDF, dôverujeme mu namiesto odhadu +1 mesiac
+    // (POHODA ho niekedy počíta inak, napr. 23 dní namiesto celého mesiaca).
+    const dueDate = row.pdfDueDate ?? addMonthsISO(peterDate, 1);
     byInvoiceNumber.set(item.invoiceNumber, { issuedDate, dueDate, dateBumped });
     if (!runningMax || issuedDate > runningMax) runningMax = issuedDate;
   }
@@ -181,7 +193,7 @@ export async function checkInvoiceImport(rows: ImportRow[]): Promise<CheckedRow[
   if (!orderNumbers.length) return [];
 
   const [{ data: orders }, { data: existingInvoices }] = await Promise.all([
-    supabase.from("orders").select("id, order_number, price, work_type"),
+    supabase.from("orders").select("id, order_number, price, work_type, sites(name, short_name)"),
     supabase.from("invoices").select("invoice_number, issued_date, order_id"),
   ]);
 
@@ -200,7 +212,20 @@ export async function checkInvoiceImport(rows: ImportRow[]): Promise<CheckedRow[
     // "Zmluva č." (napr. "545") sú posledné číslice nemeckého Auftrags-Nr (napr. "202600545") —
     // párujeme cez zhodu konca čísla, nie presnú zhodu, aby stačilo zadať len krátku referenciu.
     const ref = row.orderNumber.trim();
-    const matches = (orders ?? []).filter((o) => o.order_number && o.order_number.endsWith(ref));
+    let matches = (orders ?? []).filter((o) => o.order_number && o.order_number.endsWith(ref));
+
+    // Hodinovka nemá číslo objednávky (Peter jej nedáva Auftrags-Nr) — ak sa nenašlo nič cez
+    // číslo, skús napárovať podľa názvu stavby (presne to, čo z PDF vytiahne parser aj to,
+    // čo sa predvyplní do "Zmluva č." pre riadky bez Z-XXX referencie).
+    if (matches.length === 0) {
+      const refLower = ref.toLowerCase();
+      matches = (orders ?? []).filter((o) => {
+        if (o.order_number) return false;
+        // @ts-expect-error supabase join shape
+        const siteName = (o.sites?.short_name || o.sites?.name || "").toLowerCase();
+        return !!siteName && siteName === refLower;
+      });
+    }
 
     if (matches.length === 0) {
       return {

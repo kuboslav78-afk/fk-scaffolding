@@ -18,6 +18,7 @@ function emptyRow(key: string): ImportRow {
     amount: 0,
     peterDate: todayISO(),
     pdfPath: null,
+    pdfDueDate: null,
   };
 }
 
@@ -109,14 +110,16 @@ export function ImportInvoicesForm() {
         const key = nextKey();
         newRows.push({
           key,
-          orderNumber: p.contractRef ?? "",
+          orderNumber: p.contractRef ?? p.siteLabel ?? "",
           invoiceNumber: p.invoiceNumber ?? "",
           amount: p.amount ?? 0,
           peterDate: p.issuedDate ?? todayISO(),
           pdfPath: p.pdfPath,
+          pdfDueDate: p.dueDate,
         });
         if (p.error) newNotes[key] = `${p.fileName}: ${p.error}`;
-        else if (!p.contractRef) newNotes[key] = `${p.fileName}: nenašla sa referencia "Z-XXX" — zadaj zmluvu ručne`;
+        else if (!p.contractRef && !p.siteLabel)
+          newNotes[key] = `${p.fileName}: nenašla sa referencia "Z-XXX" ani názov stavby — zadaj zmluvu ručne`;
       }
 
       setRows((rs) => [...rs, ...newRows]);

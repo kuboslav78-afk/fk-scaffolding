@@ -22,7 +22,7 @@ export default async function InvoicesPage() {
     supabase
       .from("invoices")
       .select(
-        "id, invoice_number, amount, issued_date, due_date, sent, paid, pdf_path, orders(order_number, customer_name)"
+        "id, invoice_number, amount, issued_date, due_date, sent, paid, pdf_path, orders(order_number, customer_name, sites(name, short_name))"
       )
       .order("issued_date", { ascending: false })
       .limit(200),
@@ -36,7 +36,7 @@ export default async function InvoicesPage() {
   const groupsMap = new Map<string, Omit<InvoiceGroup, "orderLabel">>();
   for (const i of invoices ?? []) {
     // @ts-expect-error supabase join shape
-    const orderNumber: string = i.orders?.order_number ?? "—";
+    const orderNumber: string = i.orders?.order_number ?? i.orders?.sites?.short_name ?? i.orders?.sites?.name ?? "—";
     // @ts-expect-error supabase join shape
     const customerName: string = i.orders?.customer_name ?? "—";
     const existing = groupsMap.get(i.invoice_number);
