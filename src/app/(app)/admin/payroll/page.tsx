@@ -6,6 +6,7 @@ import { PayrollRow } from "@/components/payroll-row";
 import { AccommodationCostRow } from "@/components/accommodation-cost-row";
 import { addAccommodationCost } from "./actions";
 import { MONTH_NAMES, parseMonthParam, monthParamString, monthRange } from "@/lib/month";
+import { formatThousands } from "@/lib/format";
 
 export default async function PayrollPage({
   searchParams,
@@ -76,16 +77,16 @@ export default async function PayrollPage({
       <section className="grid gap-4 sm:grid-cols-3">
         <div className="card p-4">
           <p className="text-xs font-medium text-ink-400">Mzdy spolu</p>
-          <p className="mt-1 text-xl font-semibold text-ink-900">{wagesTotal.toFixed(2)} €</p>
+          <p className="mt-1 text-xl font-semibold text-ink-900">{formatThousands(wagesTotal)} €</p>
         </div>
         <div className="card p-4">
           <p className="text-xs font-medium text-ink-400">Ubytovanie spolu</p>
-          <p className="mt-1 text-xl font-semibold text-ink-900">{accommodationTotal.toFixed(2)} €</p>
+          <p className="mt-1 text-xl font-semibold text-ink-900">{formatThousands(accommodationTotal)} €</p>
         </div>
         <div className="card p-4">
           <p className="text-xs font-medium text-ink-400">Náklady spolu</p>
           <p className="mt-1 text-xl font-semibold text-brand-400">
-            {(wagesTotal + accommodationTotal).toFixed(2)} €
+            {formatThousands(wagesTotal + accommodationTotal)} €
           </p>
         </div>
       </section>

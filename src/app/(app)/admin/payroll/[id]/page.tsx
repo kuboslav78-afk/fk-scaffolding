@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/get-profile";
 import { MONTH_NAMES, parseMonthParam, monthParamString, monthRange } from "@/lib/month";
+import { formatThousands } from "@/lib/format";
 
 export default async function PayrollDetailPage({
   params,
@@ -72,11 +73,11 @@ export default async function PayrollDetailPage({
         </div>
         <div className="card p-4">
           <p className="text-xs font-medium text-ink-400">Hodinovka</p>
-          <p className="mt-1 text-xl font-semibold text-ink-900">{hourlyRate.toFixed(2)} €/h</p>
+          <p className="mt-1 text-xl font-semibold text-ink-900">{formatThousands(hourlyRate)} €/h</p>
         </div>
         <div className="card p-4">
           <p className="text-xs font-medium text-ink-400">Mzda</p>
-          <p className="mt-1 text-xl font-semibold text-brand-400">{wage.toFixed(2)} €</p>
+          <p className="mt-1 text-xl font-semibold text-brand-400">{formatThousands(wage)} €</p>
         </div>
       </section>
 

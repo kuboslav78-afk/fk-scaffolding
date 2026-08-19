@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/get-profile";
+import { formatThousands } from "@/lib/format";
 
 export default async function FuelCardsPage() {
   const profile = await getProfile();
@@ -37,11 +38,11 @@ export default async function FuelCardsPage() {
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
         <div className="card p-5">
           <p className="label">Spolu (bez DPH)</p>
-          <p className="text-2xl font-semibold text-ink-900">{grandTotal.toFixed(2)} €</p>
+          <p className="text-2xl font-semibold text-ink-900">{formatThousands(grandTotal)} €</p>
         </div>
         <div className="card p-5">
           <p className="label">Tento mesiac</p>
-          <p className="text-2xl font-semibold text-ink-900">{grandThisMonth.toFixed(2)} €</p>
+          <p className="text-2xl font-semibold text-ink-900">{formatThousands(grandThisMonth)} €</p>
         </div>
         <div className="card p-5">
           <p className="label">Aktívnych kariet</p>
@@ -77,11 +78,11 @@ export default async function FuelCardsPage() {
                   <td className="whitespace-nowrap py-2.5 pr-3 text-ink-500">{c.card_type ?? "—"}</td>
                   <td className="whitespace-nowrap py-2.5 pr-3 text-ink-500">{c.valid_until ?? "—"}</td>
                   <td className="whitespace-nowrap py-2.5 pr-3 text-ink-700">
-                    {s ? `${s.thisMonthTotal.toFixed(2)} €` : "0.00 €"}
+                    {s ? `${formatThousands(s.thisMonthTotal)} €` : "0.00 €"}
                   </td>
                   <td className="whitespace-nowrap py-2.5 pr-3">
                     <span className="inline-flex items-center rounded-md bg-sky-400/20 px-1.5 py-0.5 font-semibold text-sky-300">
-                      {s ? s.total.toFixed(2) : "0.00"} €
+                      {s ? formatThousands(s.total) : "0.00"} €
                     </span>
                   </td>
                   <td className="whitespace-nowrap py-2.5 pr-3 text-ink-500">{s?.lastDate ?? "—"}</td>

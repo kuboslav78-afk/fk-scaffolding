@@ -8,6 +8,7 @@ import { TaskRow } from "@/components/task-row";
 import { addTask } from "./actions";
 import { DAY_NAMES, parseWeekParam, weekParamString, weekDates, adjacentWeekParams } from "@/lib/week";
 import { todayISO } from "@/lib/dates";
+import { formatThousands } from "@/lib/format";
 
 export default async function DashboardPage({
   searchParams,
@@ -122,18 +123,18 @@ export default async function DashboardPage({
         <section className="grid gap-4 sm:grid-cols-3">
           <div className="card p-4">
             <p className="text-xs font-medium text-ink-400">Mesačný obrat ({today.slice(0, 7)})</p>
-            <p className="mt-1 text-2xl font-semibold text-ink-900">{monthlyTurnover.toFixed(2)} €</p>
+            <p className="mt-1 text-2xl font-semibold text-ink-900">{formatThousands(monthlyTurnover)} €</p>
           </div>
           <div className="card p-4">
             <p className="text-xs font-medium text-ink-400">Čaká na úhradu</p>
             <p className="mt-1 text-2xl font-semibold text-ink-900">
-              {pendingInvoices.length} · {pendingSum.toFixed(2)} €
+              {pendingInvoices.length} · {formatThousands(pendingSum)} €
             </p>
           </div>
           <div className="card p-4">
             <p className="text-xs font-medium text-ink-400">Po splatnosti</p>
             <p className="mt-1 text-2xl font-semibold text-red-400">
-              {overdueInvoices.length} · {overdueSum.toFixed(2)} €
+              {overdueInvoices.length} · {formatThousands(overdueSum)} €
             </p>
           </div>
         </section>

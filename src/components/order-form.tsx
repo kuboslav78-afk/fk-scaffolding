@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { createOrder, parseOrderPdfAction } from "@/app/(app)/admin/orders/actions";
 import { todayISO } from "@/lib/dates";
+import { formatThousands } from "@/lib/format";
 
 function monthOf(iso: string) {
   return iso.slice(0, 7);
@@ -320,7 +321,7 @@ export function OrderForm({ sites }: { sites: Site[] }) {
       {!!parseFloat(price) && workType !== "hodiny" && (
         <p className="label">
           Moja faktúra {fullInvoice ? "(100%)" : "(Peter si necháva 20%)"}:{" "}
-          {(parseFloat(price) * (fullInvoice ? 1 : 0.8)).toFixed(2)} € — vytvor ju nižšie po
+          {formatThousands(parseFloat(price) * (fullInvoice ? 1 : 0.8))} € — vytvor ju nižšie po
           uložení objednávky
         </p>
       )}

@@ -10,6 +10,7 @@ import {
 import { DeleteOrderButton } from "@/components/delete-order-button";
 import { todayISO, formatDateSK } from "@/lib/dates";
 import { computeInvoiceAmount } from "@/lib/order-amount";
+import { formatThousands } from "@/lib/format";
 
 const WORK_TYPE_LABELS: Record<string, string> = {
   montaz: "Montáž",
@@ -151,7 +152,7 @@ export function EditableOrderRow({
       <td className="whitespace-nowrap py-2.5 pr-2">
         {myInvoiceAmount != null ? (
           <span className="inline-flex items-center rounded-md bg-sky-400/20 px-1.5 py-0.5 font-semibold text-sky-300">
-            {myInvoiceAmount.toFixed(2)} €
+            {formatThousands(myInvoiceAmount)} €
           </span>
         ) : (
           <span className="text-ink-900">—</span>

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile } from "@/lib/get-profile";
 import { computeInvoiceAmount } from "@/lib/order-amount";
+import { formatThousands } from "@/lib/format";
 
 const WORK_TYPE_LABELS: Record<string, string> = {
   montaz: "Montáž",
@@ -61,12 +62,12 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           Moja faktúra{!isHourly && order.full_invoice ? " (100%)" : ""}
         </p>
         <p className="text-4xl font-semibold text-ink-900">
-          {myInvoiceAmount != null ? `${myInvoiceAmount.toFixed(2)} €` : "—"}
+          {myInvoiceAmount != null ? `${formatThousands(myInvoiceAmount)} €` : "—"}
         </p>
         {!isHourly && order.price != null && (
           <p className="mt-2 text-sm text-ink-400">
-            Celková suma objednávky: {order.price.toFixed(2)} € · SUKA:{" "}
-            {(order.contribution_amount ?? order.price * 0.1).toFixed(2)} €
+            Celková suma objednávky: {formatThousands(order.price)} € · SUKA:{" "}
+            {formatThousands(order.contribution_amount ?? order.price * 0.1)} €
           </p>
         )}
         {isHourly && order.hours != null && (

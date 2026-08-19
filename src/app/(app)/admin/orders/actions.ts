@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile } from "@/lib/get-profile";
 import { parseOrderPdf } from "@/lib/parse-order-pdf";
 import { getResendClient, RESEND_FROM_EMAIL } from "@/lib/resend";
+import { formatThousands } from "@/lib/format";
 
 async function uploadOrderPdf(orderId: string, pdf: File) {
   const admin = createAdminClient();
@@ -208,7 +209,7 @@ export async function sendGroupedInvoicesToPeter(
       content: Buffer.from(await fileData.arrayBuffer()),
     });
     summaryLines.push(
-      `Faktúra ${invoiceNumber} — ${g.orderLabels.join(", ")} — ${g.amount.toFixed(2)} € — splatnosť ${g.due_date ?? "—"}`
+      `Faktúra ${invoiceNumber} — ${g.orderLabels.join(", ")} — ${formatThousands(g.amount)} € — splatnosť ${g.due_date ?? "—"}`
     );
     allIds.push(...g.ids);
   }

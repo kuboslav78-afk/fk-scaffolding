@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { addMonthsISO } from "@/lib/dates";
+import { formatThousands } from "@/lib/format";
 import { markOrdersPrepSent } from "@/app/(app)/admin/orders/prep/actions";
 
 type Order = {
@@ -75,7 +76,7 @@ export function InvoicePrepForm({
       ref: o.label || "-",
       issued: formatDateShort(o.issuedDate),
       due: formatDateShort(o.dueDate),
-      price: `${(o.invoiceAmount ?? 0).toFixed(2)} €`,
+      price: `${formatThousands(o.invoiceAmount ?? 0)} €`,
     }));
 
     const widths = columns.map((c) => Math.max(c.label.length, ...rows.map((r) => r[c.key].length)) + 3);
@@ -161,7 +162,7 @@ export function InvoicePrepForm({
                   </td>
                   <td className="py-2.5 pr-3 text-ink-700">{o.customer_name ?? "bez zákazníka"}</td>
                   <td className="whitespace-nowrap py-2.5 pr-3 text-ink-900">
-                    {o.invoiceAmount != null ? `${o.invoiceAmount.toFixed(2)} €` : ""}
+                    {o.invoiceAmount != null ? `${formatThousands(o.invoiceAmount)} €` : ""}
                   </td>
                   <td className="py-2.5 pr-3">
                     <input

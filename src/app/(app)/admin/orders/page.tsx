@@ -6,6 +6,7 @@ import { getProfile } from "@/lib/get-profile";
 import { EditableOrderRow } from "@/components/editable-order-row";
 import { OrdersSubnav } from "@/components/orders-subnav";
 import { computeInvoiceAmount } from "@/lib/order-amount";
+import { formatThousands } from "@/lib/format";
 
 const MONTH_NAMES = [
   "Január",
@@ -102,7 +103,7 @@ export default async function OrdersPage({
             {MONTH_NAMES[monthIndex]} {year}
           </h2>
           <span className="inline-flex items-center rounded-md bg-sky-400/20 px-2 py-0.5 text-sm font-semibold text-sky-300">
-            Obrat {monthTotal.toFixed(2)} €
+            Obrat {formatThousands(monthTotal)} €
           </span>
         </div>
         <div className="flex items-center gap-1">

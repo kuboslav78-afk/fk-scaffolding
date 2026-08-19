@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/get-profile";
 import { todayISO } from "@/lib/dates";
+import { formatThousands } from "@/lib/format";
 
 export default async function AdminPage() {
   const profile = await getProfile();
@@ -56,7 +57,7 @@ export default async function AdminPage() {
         <div className="card flex items-start justify-between p-4 transition-shadow duration-150 hover:shadow-[0_4px_16px_rgba(23,21,15,0.08)]">
           <div>
             <p className="text-xs font-medium text-ink-400">Nezaplatené faktúry</p>
-            <p className="mt-1 text-2xl font-semibold text-ink-900">{unpaidTotal.toFixed(2)} €</p>
+            <p className="mt-1 text-2xl font-semibold text-ink-900">{formatThousands(unpaidTotal)} €</p>
           </div>
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-500/15 text-red-400">
             <svg viewBox="0 0 20 20" fill="none" className="h-4.5 w-4.5">

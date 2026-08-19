@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/get-profile";
 import { addFuelTransaction, deleteFuelTransaction, updateFuelCard } from "../actions";
+import { formatThousands } from "@/lib/format";
 
 const SK_MONTHS = [
   "január", "február", "marec", "apríl", "máj", "jún",
@@ -56,7 +57,7 @@ export default async function FuelCardDetailPage({ params }: { params: Promise<{
           </div>
           <div className="text-right">
             <p className="label">Spolu bez DPH</p>
-            <p className="text-3xl font-semibold text-sky-300">{total.toFixed(2)} €</p>
+            <p className="text-3xl font-semibold text-sky-300">{formatThousands(total)} €</p>
           </div>
         </div>
 
@@ -99,7 +100,7 @@ export default async function FuelCardDetailPage({ params }: { params: Promise<{
             <div className="mb-2 flex items-center justify-between">
               <h3 className="font-semibold text-ink-900">{monthLabel(ym)}</h3>
               <span className="inline-flex items-center rounded-md bg-sky-400/20 px-1.5 py-0.5 font-semibold text-sky-300">
-                {monthTotal.toFixed(2)} €
+                {formatThousands(monthTotal)} €
               </span>
             </div>
             <table className="w-full min-w-[600px] border-collapse">
@@ -122,10 +123,10 @@ export default async function FuelCardDetailPage({ params }: { params: Promise<{
                     <td className="whitespace-nowrap py-2 pr-3 text-ink-500">{t.purpose ?? "—"}</td>
                     <td className="whitespace-nowrap py-2 pr-3 text-ink-500">{t.vehicle ?? "—"}</td>
                     <td className="whitespace-nowrap py-2 pr-3 text-ink-500">
-                      {t.gross_amount != null ? `${t.gross_amount.toFixed(2)} €` : "—"}
+                      {t.gross_amount != null ? `${formatThousands(t.gross_amount)} €` : "—"}
                     </td>
                     <td className="whitespace-nowrap py-2 pr-3 text-ink-900">
-                      {t.net_amount != null ? `${t.net_amount.toFixed(2)} €` : "—"}
+                      {t.net_amount != null ? `${formatThousands(t.net_amount)} €` : "—"}
                     </td>
                     <td className="whitespace-nowrap py-2">
                       <form action={deleteFuelTransaction.bind(null, card.id, t.id)}>

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { updateAccommodationCost, deleteAccommodationCost } from "@/app/(app)/admin/payroll/actions";
+import { formatThousands } from "@/lib/format";
 
 type Cost = {
   id: string;
@@ -49,7 +50,7 @@ export function AccommodationCostRow({ cost }: { cost: Cost }) {
     <li className="flex items-center justify-between gap-3 py-2.5 text-sm">
       <span className="text-ink-600">{cost.note ?? "bez poznámky"}</span>
       <span className="flex shrink-0 items-center gap-2">
-        <span className="font-medium text-ink-900">{cost.amount.toFixed(2)} €</span>
+        <span className="font-medium text-ink-900">{formatThousands(cost.amount)} €</span>
         <button onClick={() => setEditing(true)} className="btn-ghost btn-sm">
           Upraviť
         </button>

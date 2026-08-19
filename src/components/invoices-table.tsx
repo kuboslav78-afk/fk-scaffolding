@@ -8,6 +8,7 @@ import {
   sendGroupedInvoicesToPeter,
 } from "@/app/(app)/admin/orders/actions";
 import { addMonthsISO } from "@/lib/dates";
+import { formatThousands } from "@/lib/format";
 
 const TABLE_COLS = 8;
 
@@ -50,7 +51,7 @@ function GroupedInvoiceRow({
         [
           `Faktúra č. ${group.invoiceNumber}`,
           `Objednávka: ${group.orderLabel}`,
-          `Suma: ${group.amount.toFixed(2)} €`,
+          `Suma: ${formatThousands(group.amount)} €`,
           `Vystavená: ${group.issued_date}`,
           group.due_date ? `Splatnosť: ${group.due_date}` : null,
         ]
@@ -131,7 +132,7 @@ function GroupedInvoiceRow({
       </td>
       <td className="whitespace-nowrap py-2.5 pr-3 font-medium text-ink-900">{group.invoiceNumber}</td>
       <td className="py-2.5 pr-3 text-ink-700">{group.orderLabel}</td>
-      <td className="whitespace-nowrap py-2.5 pr-3 text-ink-900">{group.amount.toFixed(2)} €</td>
+      <td className="whitespace-nowrap py-2.5 pr-3 text-ink-900">{formatThousands(group.amount)} €</td>
       <td className="whitespace-nowrap py-2.5 pr-3 text-ink-500">{group.issued_date}</td>
       <td className="whitespace-nowrap py-2.5 pr-3 text-ink-500">{group.due_date ?? "—"}</td>
       <td className="whitespace-nowrap py-2.5 pr-3">

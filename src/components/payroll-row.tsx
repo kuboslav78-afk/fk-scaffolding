@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { updateHourlyRate } from "@/app/(app)/admin/payroll/actions";
+import { formatThousands } from "@/lib/format";
 
 type Employee = {
   id: string;
@@ -54,7 +55,7 @@ export function PayrollRow({
           </button>
         </div>
       </td>
-      <td className="whitespace-nowrap py-2.5 pr-3 font-semibold text-ink-900">{wage.toFixed(2)} €</td>
+      <td className="whitespace-nowrap py-2.5 pr-3 font-semibold text-ink-900">{formatThousands(wage)} €</td>
       <td className="whitespace-nowrap py-2.5">
         <Link href={`/admin/payroll/${employee.id}?month=${monthParam}`} className="btn-ghost btn-sm">
           Detail
