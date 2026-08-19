@@ -68,6 +68,14 @@ const ICONS = {
       <path d="M7 7h6M7 10h6M7 13h3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   ),
+  fuel: (
+    <svg viewBox="0 0 20 20" fill="none" className="h-4.5 w-4.5">
+      <path d="M5 17V5a1 1 0 011-1h5a1 1 0 011 1v12" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M4 17h9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M12 8h1.5L16 10.3V15a1 1 0 01-1 1h-.2" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <rect x="6.5" y="6" width="3" height="3.2" rx="0.4" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  ),
 };
 
 const NAV_ITEMS: NavItem[] = [
@@ -79,6 +87,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/admin/orders", label: "Objednávky", icon: ICONS.orders, adminOnly: true },
   { href: "/admin/payroll", label: "Výplaty", icon: ICONS.payroll, adminOnly: true },
   { href: "/admin/diary", label: "Stavebný denník", icon: ICONS.diary, adminOnly: true },
+  { href: "/admin/fuel-cards", label: "Palivové karty", icon: ICONS.fuel, adminOnly: true },
 ];
 
 function NavLinks({ role, onNavigate }: { role: string; onNavigate?: () => void }) {

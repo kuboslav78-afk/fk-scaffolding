@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile } from "@/lib/get-profile";
 import { EditableOrderRow } from "@/components/editable-order-row";
 import { OrdersSubnav } from "@/components/orders-subnav";
+import { computeInvoiceAmount } from "@/lib/order-amount";
 
 const MONTH_NAMES = [
   "Január",
@@ -66,6 +67,8 @@ export default async function OrdersPage({
       .order("created_at", { ascending: true }),
   ]);
 
+  const monthTotal = (monthOrders ?? []).reduce((sum, o) => sum + (computeInvoiceAmount(o) ?? 0), 0);
+
   const pdfUrlByOrder = new Map<string, string>();
   const ordersWithPdf = (monthOrders ?? []).filter((o) => o.pdf_path);
   if (ordersWithPdf.length) {
@@ -94,9 +97,14 @@ export default async function OrdersPage({
       <OrdersSubnav active="orders" />
 
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-ink-900">
-          {MONTH_NAMES[monthIndex]} {year}
-        </h2>
+        <div className="flex items-center gap-2.5">
+          <h2 className="font-semibold text-ink-900">
+            {MONTH_NAMES[monthIndex]} {year}
+          </h2>
+          <span className="inline-flex items-center rounded-md bg-sky-400/20 px-2 py-0.5 text-sm font-semibold text-sky-300">
+            Obrat {monthTotal.toFixed(2)} €
+          </span>
+        </div>
         <div className="flex items-center gap-1">
           <Link href={`/admin/orders?month=${prevParam}`} className="btn-ghost btn-sm px-2">
             ←
