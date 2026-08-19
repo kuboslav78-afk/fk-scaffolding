@@ -193,7 +193,7 @@ export async function checkInvoiceImport(rows: ImportRow[]): Promise<CheckedRow[
   if (!orderNumbers.length) return [];
 
   const [{ data: orders }, { data: existingInvoices }] = await Promise.all([
-    supabase.from("orders").select("id, order_number, price, work_type, sites(name, short_name)"),
+    supabase.from("orders").select("id, order_number, price, work_type, full_invoice, sites(name, short_name)"),
     supabase.from("invoices").select("invoice_number, issued_date, order_id"),
   ]);
 
@@ -265,7 +265,9 @@ export async function checkInvoiceImport(rows: ImportRow[]): Promise<CheckedRow[
     // jedna objednávka môže mať viac faktúr a jedna faktúra viac objednávok — nekontrolujeme,
     // či objednávka už nejakú faktúru má, len či presne táto dvojica faktúra+objednávka nie je duplicitná
     const expected =
-      order.work_type === "hodiny" || order.price == null ? null : Math.round(order.price * 0.8 * 100) / 100;
+      order.work_type === "hodiny" || order.price == null
+        ? null
+        : Math.round((order.full_invoice ? order.price : order.price * 0.8) * 100) / 100;
 
     if (expected != null && Math.abs(expected - row.amount) > 0.5) {
       return {

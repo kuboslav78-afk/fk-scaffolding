@@ -9,6 +9,7 @@ import {
 } from "@/app/(app)/admin/orders/actions";
 import { DeleteOrderButton } from "@/components/delete-order-button";
 import { todayISO, formatDateSK } from "@/lib/dates";
+import { computeInvoiceAmount } from "@/lib/order-amount";
 
 const WORK_TYPE_LABELS: Record<string, string> = {
   montaz: "Montáž",
@@ -35,6 +36,7 @@ type Order = {
   hourly_rate: number | null;
   peter_invoice_issued: boolean;
   peter_invoice_date: string | null;
+  full_invoice: boolean;
   note: string | null;
   site_id: string | null;
   siteName: string;
@@ -54,14 +56,7 @@ export function EditableOrderRow({
   const [isPending, startTransition] = useTransition();
   const [peterDate, setPeterDate] = useState(todayISO());
 
-  const myInvoiceAmount =
-    order.work_type === "hodiny"
-      ? order.hours != null && order.hourly_rate != null
-        ? order.hours * order.hourly_rate
-        : order.price
-      : order.price != null
-        ? order.price * 0.8
-        : null;
+  const myInvoiceAmount = computeInvoiceAmount(order);
 
   if (editing) {
     return (
@@ -108,6 +103,10 @@ export function EditableOrderRow({
                 <input type="number" step="0.01" name="hourly_rate" defaultValue={order.hourly_rate ?? ""} placeholder="Sadzba (€/hod)" className="input" />
               )}
             </div>
+            <label className="flex items-center gap-2 text-sm text-ink-700">
+              <input type="checkbox" name="full_invoice" value="true" defaultChecked={order.full_invoice} />
+              Fakturovať 100% (bez 20% zrážky pre Petra)
+            </label>
             <div className="grid grid-cols-2 gap-2">
               <textarea name="description" defaultValue={""} placeholder="Popis práce" rows={2} className="input" />
               <textarea name="note" defaultValue={order.note ?? ""} placeholder="Poznámka" rows={2} className="input" />
@@ -138,7 +137,9 @@ export function EditableOrderRow({
       className="cursor-pointer border-b border-ink-100 text-sm hover:bg-ink-50"
     >
       <td className="whitespace-nowrap py-2.5 pr-2">
-        <span className="font-medium text-ink-900">{order.order_number ?? "—"}</span>
+        <span className="inline-flex items-center rounded-md bg-yellow-400/20 px-1.5 py-0.5 font-semibold text-yellow-300">
+          {order.order_number ?? "—"}
+        </span>
         {order.customer_name && (
           <span className="ml-1.5 text-xs text-ink-400">{order.customer_name.split(" ")[0]}</span>
         )}
@@ -147,8 +148,14 @@ export function EditableOrderRow({
       <td className="whitespace-nowrap py-2.5 pr-2 text-ink-500">
         {order.handover_date ? formatDateSK(order.handover_date) : "—"}
       </td>
-      <td className="whitespace-nowrap py-2.5 pr-2 text-ink-900">
-        {myInvoiceAmount != null ? `${myInvoiceAmount.toFixed(2)} €` : "—"}
+      <td className="whitespace-nowrap py-2.5 pr-2">
+        {myInvoiceAmount != null ? (
+          <span className="inline-flex items-center rounded-md bg-sky-400/20 px-1.5 py-0.5 font-semibold text-sky-300">
+            {myInvoiceAmount.toFixed(2)} €
+          </span>
+        ) : (
+          <span className="text-ink-900">—</span>
+        )}
       </td>
       <td className="whitespace-nowrap py-2.5 pr-2" onClick={(e) => e.stopPropagation()}>
         {order.peter_invoice_issued ? (

@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile } from "@/lib/get-profile";
+import { computeInvoiceAmount } from "@/lib/order-amount";
 
 const WORK_TYPE_LABELS: Record<string, string> = {
   montaz: "Montáž",
@@ -21,7 +22,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, order_number, customer_name, work_type, order_date, start_date, handover_date, price, contribution_amount, hours, hourly_rate, peter_invoice_issued, peter_invoice_date, note, description, pdf_path, sites(name, short_name)"
+      "id, order_number, customer_name, work_type, order_date, start_date, handover_date, price, contribution_amount, hours, hourly_rate, peter_invoice_issued, peter_invoice_date, full_invoice, note, description, pdf_path, sites(name, short_name)"
     )
     .eq("id", id)
     .single();
@@ -34,13 +35,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const siteFullName: string | null = order.sites?.short_name ? order.sites?.name : null;
 
   const isHourly = order.work_type === "hodiny";
-  const myInvoiceAmount = isHourly
-    ? order.hours != null && order.hourly_rate != null
-      ? order.hours * order.hourly_rate
-      : order.price
-    : order.price != null
-      ? order.price * 0.8
-      : null;
+  const myInvoiceAmount = computeInvoiceAmount(order);
 
   let pdfUrl: string | null = null;
   if (order.pdf_path) {
@@ -62,7 +57,9 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       </div>
 
       <div className="card p-6">
-        <p className="label">Moja faktúra</p>
+        <p className="label">
+          Moja faktúra{!isHourly && order.full_invoice ? " (100%)" : ""}
+        </p>
         <p className="text-4xl font-semibold text-ink-900">
           {myInvoiceAmount != null ? `${myInvoiceAmount.toFixed(2)} €` : "—"}
         </p>

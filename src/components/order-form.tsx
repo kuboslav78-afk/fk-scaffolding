@@ -30,6 +30,7 @@ export function OrderForm({ sites }: { sites: Site[] }) {
   const [contribution, setContribution] = useState("");
   const [hours, setHours] = useState("");
   const [hourlyRate, setHourlyRate] = useState("");
+  const [fullInvoice, setFullInvoice] = useState(false);
 
   function recomputeHourlyPrice(nextHours: string, nextRate: string) {
     const h = parseFloat(nextHours);
@@ -303,10 +304,24 @@ export function OrderForm({ sites }: { sites: Site[] }) {
         </div>
       </div>
 
+      {workType !== "hodiny" && (
+        <label className="flex items-center gap-2 text-sm text-ink-700">
+          <input
+            type="checkbox"
+            name="full_invoice"
+            value="true"
+            checked={fullInvoice}
+            onChange={(e) => setFullInvoice(e.target.checked)}
+          />
+          Fakturovať 100% (bez 20% zrážky pre Petra)
+        </label>
+      )}
+
       {!!parseFloat(price) && workType !== "hodiny" && (
         <p className="label">
-          Moja faktúra (Peter si necháva 20%): {(parseFloat(price) * 0.8).toFixed(2)} € — vytvor
-          ju nižšie po uložení objednávky
+          Moja faktúra {fullInvoice ? "(100%)" : "(Peter si necháva 20%)"}:{" "}
+          {(parseFloat(price) * (fullInvoice ? 1 : 0.8)).toFixed(2)} € — vytvor ju nižšie po
+          uložení objednávky
         </p>
       )}
       {!!parseFloat(price) && workType === "hodiny" && (

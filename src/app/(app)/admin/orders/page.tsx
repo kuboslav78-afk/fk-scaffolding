@@ -60,7 +60,7 @@ export default async function OrdersPage({
     supabase
       .from("orders")
       .select(
-        "id, order_number, customer_name, work_type, order_date, display_month, start_date, handover_date, price, contribution_amount, hours, hourly_rate, peter_invoice_issued, peter_invoice_date, note, site_id, pdf_path, sites(name, short_name)"
+        "id, order_number, customer_name, work_type, order_date, display_month, start_date, handover_date, price, contribution_amount, hours, hourly_rate, peter_invoice_issued, peter_invoice_date, full_invoice, note, site_id, pdf_path, sites(name, short_name)"
       )
       .eq("display_month", monthParam)
       .order("created_at", { ascending: true }),
@@ -149,6 +149,7 @@ export default async function OrdersPage({
                   hourly_rate: o.hourly_rate,
                   peter_invoice_issued: o.peter_invoice_issued,
                   peter_invoice_date: o.peter_invoice_date,
+                  full_invoice: o.full_invoice,
                   note: o.note,
                   site_id: o.site_id,
                   // @ts-expect-error supabase join shape

@@ -5,6 +5,7 @@ import { OrdersSubnav } from "@/components/orders-subnav";
 import { InvoicePrepForm } from "@/components/invoice-prep-form";
 import { DeleteContactButton } from "@/components/delete-contact-button";
 import { isoWeekNumber } from "@/lib/dates";
+import { computeInvoiceAmount } from "@/lib/order-amount";
 import { addContact } from "./actions";
 
 export default async function InvoicePrepPage() {
@@ -18,7 +19,7 @@ export default async function InvoicePrepPage() {
     supabase
       .from("orders")
       .select(
-        "id, order_number, customer_name, price, work_type, hours, hourly_rate, order_date, peter_invoice_issued, peter_invoice_date, prep_sent, sites(name, short_name)"
+        "id, order_number, customer_name, price, work_type, hours, hourly_rate, full_invoice, order_date, peter_invoice_issued, peter_invoice_date, prep_sent, sites(name, short_name)"
       )
       .order("order_date", { ascending: false }),
     supabase.from("invoices").select("order_id"),
@@ -30,13 +31,7 @@ export default async function InvoicePrepPage() {
     .filter((o) => !invoicedOrderIds.has(o.id))
     .map((o) => {
       const isHourly = o.work_type === "hodiny";
-      const invoiceAmount = isHourly
-        ? o.hours != null && o.hourly_rate != null
-          ? o.hours * o.hourly_rate
-          : o.price
-        : o.price != null
-          ? Math.round(o.price * 0.8 * 100) / 100
-          : null;
+      const invoiceAmount = computeInvoiceAmount(o);
       // @ts-expect-error supabase join shape
       const siteName: string = o.sites?.short_name || o.sites?.name || "bez stavby";
       const defaultLabel =

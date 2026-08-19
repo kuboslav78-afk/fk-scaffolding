@@ -80,6 +80,7 @@ export async function createOrder(formData: FormData) {
       peter_invoice_issued: formData.get("peter_invoice_issued") === "true",
       peter_invoice_date:
         formData.get("peter_invoice_issued") === "true" ? formData.get("peter_invoice_date") || null : null,
+      full_invoice: formData.get("full_invoice") === "true",
       description: formData.get("description") || null,
       note: formData.get("note") || null,
       created_by: requester.id,
@@ -330,6 +331,7 @@ export async function updateOrder(orderId: string, formData: FormData) {
       contribution_amount: formData.get("contribution_amount") || null,
       hours: formData.get("hours") || null,
       hourly_rate: formData.get("hourly_rate") || null,
+      full_invoice: formData.get("full_invoice") === "true",
       description: formData.get("description") || null,
       note: formData.get("note") || null,
     })
