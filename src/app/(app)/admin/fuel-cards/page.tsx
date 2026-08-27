@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/get-profile";
 import { formatThousands } from "@/lib/format";
+import { FuelImportForm } from "@/components/fuel-import-form";
 
 export default async function FuelCardsPage() {
   const profile = await getProfile();
@@ -34,6 +35,8 @@ export default async function FuelCardsPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 md:px-8 md:py-8">
       <h1 className="text-2xl font-semibold text-ink-900">Palivové karty</h1>
+
+      <FuelImportForm />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
         <div className="card p-5">
