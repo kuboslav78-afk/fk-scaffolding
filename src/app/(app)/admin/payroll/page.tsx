@@ -36,7 +36,7 @@ export default async function PayrollPage({
       .lt("work_date", rangeEnd),
     supabase
       .from("accommodation_costs")
-      .select("id, amount, note")
+      .select("id, amount, note, created_at")
       .eq("month", rangeStart)
       .order("created_at"),
   ]);
@@ -119,14 +119,30 @@ export default async function PayrollPage({
       </div>
 
       <div className="card p-5">
-        <h2 className="mb-4 font-semibold text-ink-900">
-          Náklady na ubytovanie — {MONTH_NAMES[monthIndex]} {year}
-        </h2>
-        <ul className="divide-y divide-ink-100">
-          {accommodations?.map((a) => (
-            <AccommodationCostRow key={a.id} cost={a} />
-          ))}
-        </ul>
+        <div className="mb-3 flex items-center gap-2.5">
+          <h2 className="font-semibold text-ink-900">
+            Náklady na ubytovanie — {MONTH_NAMES[monthIndex]} {year}
+          </h2>
+          <span className="inline-flex items-center rounded-md bg-sky-400/20 px-2 py-0.5 text-sm font-semibold text-sky-300">
+            {formatThousands(accommodationTotal)} €
+          </span>
+        </div>
+        {!!accommodations?.length && (
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="border-b border-ink-100 text-left text-xs font-medium uppercase tracking-wide text-ink-500">
+                <th className="pb-2 pr-3">Pridané</th>
+                <th className="pb-2 pr-3">Poznámka</th>
+                <th className="pb-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {accommodations?.map((a) => (
+                <AccommodationCostRow key={a.id} cost={a} />
+              ))}
+            </tbody>
+          </table>
+        )}
         {!accommodations?.length && (
           <p className="py-2 text-sm text-ink-400">Zatiaľ žiadne náklady na ubytovanie.</p>
         )}
