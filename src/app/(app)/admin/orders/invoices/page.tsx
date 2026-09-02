@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile } from "@/lib/get-profile";
 import { OrdersSubnav } from "@/components/orders-subnav";
 import { InvoicesTable, type InvoiceGroup } from "@/components/invoices-table";
@@ -33,7 +34,7 @@ export default async function InvoicesPage() {
 
   // Jedna fyzická faktúra môže mať viac riadkov v DB (jeden na objednávku) — zoskupíme
   // podľa čísla faktúry, aby sa v prehľade aj pri odosielaní zobrazovala/posielala len raz.
-  const groupsMap = new Map<string, Omit<InvoiceGroup, "orderLabel">>();
+  const groupsMap = new Map<string, Omit<InvoiceGroup, "orderLabel" | "pdfUrl">>();
   for (const i of invoices ?? []) {
     // @ts-expect-error supabase join shape
     const orderNumber: string = i.orders?.order_number ?? i.orders?.sites?.short_name ?? i.orders?.sites?.name ?? "—";
@@ -56,15 +57,34 @@ export default async function InvoicesPage() {
         sent: i.sent,
         paid: i.paid,
         hasPdf: !!i.pdf_path,
+        pdfPath: i.pdf_path,
         orderNumbers: [orderNumber],
         customerName,
       });
     }
   }
 
-  const groups = [...groupsMap.values()]
+  const groupsArr = [...groupsMap.values()];
+  const pdfUrlByInvoiceNumber = new Map<string, string>();
+  const groupsWithPdf = groupsArr.filter((g) => g.pdfPath);
+  if (groupsWithPdf.length) {
+    const admin = createAdminClient();
+    const { data: signedUrls } = await admin.storage
+      .from("invoice-pdfs")
+      .createSignedUrls(
+        groupsWithPdf.map((g) => g.pdfPath as string),
+        3600
+      );
+    groupsWithPdf.forEach((g, i) => {
+      const url = signedUrls?.[i]?.signedUrl;
+      if (url) pdfUrlByInvoiceNumber.set(g.invoiceNumber, url);
+    });
+  }
+
+  const groups = groupsArr
     .map((g) => ({
       ...g,
+      pdfUrl: pdfUrlByInvoiceNumber.get(g.invoiceNumber) ?? null,
       orderLabel:
         g.orderNumbers.length === 1
           ? `${g.orderNumbers[0]} · ${g.customerName}`
@@ -83,7 +103,7 @@ export default async function InvoicesPage() {
 
       <OrdersSubnav active="invoices" />
 
-      <InvoicesTable groups={groups} peterEmail={peterContact?.email ?? null} />
+      <InvoicesTable groups={groups} peterEmail={peterContact?.email ?? null} adminName={profile.full_name} />
     </div>
   );
 }

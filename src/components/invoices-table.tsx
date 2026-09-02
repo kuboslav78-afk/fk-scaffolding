@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
   updateInvoice,
   deleteInvoiceGroup,
@@ -10,7 +10,7 @@ import {
 import { addMonthsISO } from "@/lib/dates";
 import { formatThousands } from "@/lib/format";
 
-const TABLE_COLS = 8;
+const TABLE_COLS = 9;
 
 export type InvoiceGroup = {
   invoiceNumber: string;
@@ -21,10 +21,21 @@ export type InvoiceGroup = {
   sent: boolean;
   paid: boolean;
   hasPdf: boolean;
+  pdfPath: string | null;
+  pdfUrl: string | null;
   orderNumbers: string[];
   customerName: string;
   orderLabel: string;
 };
+
+function formatDateShort(iso: string) {
+  const d = new Date(iso + "T00:00:00");
+  return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
+}
+
+function padCol(value: string, width: number) {
+  return value.length >= width ? value + " " : value.padEnd(width, " ");
+}
 
 function GroupedInvoiceRow({
   group,
@@ -133,6 +144,15 @@ function GroupedInvoiceRow({
       <td className="whitespace-nowrap py-2.5 pr-3 font-medium text-ink-900">{group.invoiceNumber}</td>
       <td className="py-2.5 pr-3 text-ink-700">{group.orderLabel}</td>
       <td className="whitespace-nowrap py-2.5 pr-3 text-ink-900">{formatThousands(group.amount)} €</td>
+      <td className="whitespace-nowrap py-2.5 pr-3">
+        {group.pdfUrl ? (
+          <a href={group.pdfUrl} target="_blank" rel="noreferrer" className="btn-ghost btn-sm">
+            PDF
+          </a>
+        ) : (
+          <span className="text-xs text-ink-400">—</span>
+        )}
+      </td>
       <td className="whitespace-nowrap py-2.5 pr-3 text-ink-500">{group.issued_date}</td>
       <td className="whitespace-nowrap py-2.5 pr-3 text-ink-500">{group.due_date ?? "—"}</td>
       <td className="whitespace-nowrap py-2.5 pr-3">
@@ -185,12 +205,21 @@ function GroupedInvoiceRow({
   );
 }
 
-export function InvoicesTable({ groups, peterEmail }: { groups: InvoiceGroup[]; peterEmail: string | null }) {
+export function InvoicesTable({
+  groups,
+  peterEmail,
+  adminName,
+}: {
+  groups: InvoiceGroup[];
+  peterEmail: string | null;
+  adminName: string;
+}) {
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<string | null>(null);
 
-  const selectedNumbers = groups.filter((g) => selected[g.invoiceNumber]).map((g) => g.invoiceNumber);
+  const selectedGroups = groups.filter((g) => selected[g.invoiceNumber]);
+  const selectedNumbers = selectedGroups.map((g) => g.invoiceNumber);
 
   function handleSend() {
     setResult(null);
@@ -205,6 +234,56 @@ export function InvoicesTable({ groups, peterEmail }: { groups: InvoiceGroup[]; 
     });
   }
 
+  function handleMailtoSent() {
+    startTransition(() => {
+      toggleInvoiceGroupFlag(
+        selectedGroups.flatMap((g) => g.ids),
+        "sent",
+        true
+      );
+    });
+    setSelected({});
+  }
+
+  const mailtoHref = useMemo(() => {
+    if (!selectedGroups.length || !peterEmail) return null;
+
+    const columns: { key: "num" | "orders" | "amount" | "due"; label: string }[] = [
+      { key: "num", label: "Faktúra" },
+      { key: "orders", label: "Objednávka" },
+      { key: "amount", label: "Suma" },
+      { key: "due", label: "Splatnosť" },
+    ];
+    const rows = selectedGroups.map((g) => ({
+      num: g.invoiceNumber,
+      orders: g.orderLabel,
+      amount: `${formatThousands(g.amount)} €`,
+      due: g.due_date ? formatDateShort(g.due_date) : "-",
+    }));
+    const widths = columns.map((c) => Math.max(c.label.length, ...rows.map((r) => r[c.key].length)) + 3);
+    const headerLine = columns.map((c, i) => padCol(c.label, widths[i])).join("");
+    const separatorLine = columns.map((_, i) => "-".repeat(widths[i] - 1)).join(" ");
+    const lines = [headerLine, separatorLine, ...rows.map((r) => columns.map((c, i) => padCol(r[c.key], widths[i])).join(""))];
+    const totalAmount = selectedGroups.reduce((s, g) => s + g.amount, 0);
+
+    const subject =
+      selectedGroups.length === 1 ? `Faktúra ${selectedGroups[0].invoiceNumber}` : `Faktúry (${selectedGroups.length})`;
+    const body = [
+      "Dobrý deň,",
+      "",
+      "posielam faktúry, PDF prosím pripoj priamo z tohto emailu (stiahni cez tlačidlo PDF pri faktúre):",
+      "",
+      ...lines,
+      "",
+      `Spolu: ${formatThousands(totalAmount)} €`,
+      "",
+      "S pozdravom,",
+      adminName,
+    ].join("\n");
+
+    return `mailto:${encodeURIComponent(peterEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }, [selectedGroups, peterEmail, adminName]);
+
   return (
     <div className="space-y-4">
       <div className="card overflow-x-auto p-5">
@@ -215,6 +294,7 @@ export function InvoicesTable({ groups, peterEmail }: { groups: InvoiceGroup[]; 
               <th className="pb-2 pr-3">Číslo</th>
               <th className="pb-2 pr-3">Objednávka</th>
               <th className="pb-2 pr-3">Suma</th>
+              <th className="pb-2 pr-3">PDF</th>
               <th className="pb-2 pr-3">Vystavená</th>
               <th className="pb-2 pr-3">Splatnosť</th>
               <th className="pb-2 pr-3">Odoslaná</th>
@@ -240,13 +320,22 @@ export function InvoicesTable({ groups, peterEmail }: { groups: InvoiceGroup[]; 
 
       {!!groups.length && (
         <div className="card flex flex-wrap items-center gap-3 p-5">
+          {mailtoHref ? (
+            <a href={mailtoHref} onClick={handleMailtoSent} className="btn-primary">
+              Pripraviť email ({selectedNumbers.length})
+            </a>
+          ) : (
+            <button type="button" disabled className="btn-primary opacity-50">
+              Pripraviť email
+            </button>
+          )}
           <button
             type="button"
             onClick={handleSend}
             disabled={isPending || !selectedNumbers.length}
-            className="btn-primary"
+            className="btn-secondary"
           >
-            {isPending ? "Odosielam…" : `Poslať Petrovi (${selectedNumbers.length})`}
+            {isPending ? "Odosielam…" : `Poslať cez Resend (${selectedNumbers.length})`}
           </button>
           {!selectedNumbers.length && (
             <p className="text-xs text-ink-400">Zaškrtni faktúry vyššie, ktoré chceš poslať naraz.</p>
