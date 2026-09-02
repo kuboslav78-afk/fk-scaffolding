@@ -6,6 +6,7 @@ import {
   deleteInvoiceGroup,
   toggleInvoiceGroupFlag,
   sendGroupedInvoicesToPeter,
+  sendTestInvoiceEmail,
 } from "@/app/(app)/admin/orders/actions";
 import { addMonthsISO } from "@/lib/dates";
 import { formatThousands } from "@/lib/format";
@@ -52,8 +53,18 @@ function GroupedInvoiceRow({
   const [isPending, startTransition] = useTransition();
   const [issuedDate, setIssuedDate] = useState(group.issued_date);
   const [dueDate, setDueDate] = useState(group.due_date ?? addMonthsISO(group.issued_date, 1));
+  const [testResult, setTestResult] = useState<string | null>(null);
+  const [isTestPending, startTestTransition] = useTransition();
 
   const single = group.ids.length === 1;
+
+  function handleTestSend() {
+    setTestResult(null);
+    startTestTransition(async () => {
+      const res = await sendTestInvoiceEmail(group.invoiceNumber);
+      setTestResult(res.ok ? `Odoslané na ${res.email}` : `Chyba: ${res.error}`);
+    });
+  }
 
   const mailtoHref = peterEmail
     ? `mailto:${encodeURIComponent(peterEmail)}?subject=${encodeURIComponent(
@@ -185,7 +196,7 @@ function GroupedInvoiceRow({
         )}
       </td>
       <td className="whitespace-nowrap py-2.5">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <form action={toggleInvoiceGroupFlag.bind(null, group.ids, "paid", !group.paid)}>
             <button type="submit" className={group.paid ? "badge-success" : "badge-neutral"}>
               {group.paid ? "uhradená ✓" : "uhradiť"}
@@ -196,9 +207,20 @@ function GroupedInvoiceRow({
               Upraviť
             </button>
           )}
+          {group.hasPdf && (
+            <button
+              onClick={handleTestSend}
+              disabled={isTestPending}
+              className="btn-ghost btn-sm"
+              title="Pošle túto faktúru na tvoj vlastný email (nie Petrovi) na overenie"
+            >
+              {isTestPending ? "Odosielam…" : "Test"}
+            </button>
+          )}
           <button onClick={handleDelete} disabled={isPending} className="btn-danger btn-sm">
             Zmazať
           </button>
+          {testResult && <span className="w-full text-xs text-ink-500">{testResult}</span>}
         </div>
       </td>
     </tr>

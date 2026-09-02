@@ -241,6 +241,64 @@ export async function sendGroupedInvoicesToPeter(
   return { ok: true, sent: attachments.length };
 }
 
+/**
+ * Pošle faktúru na email prihláseného admina namiesto Petra — na overenie, že Resend/PDF
+ * príloha funguje, bez toho, aby to ovplyvnilo "odoslané" stav faktúry alebo išlo reálne Petrovi.
+ */
+export async function sendTestInvoiceEmail(
+  invoiceNumber: string
+): Promise<{ ok: true; email: string } | { ok: false; error: string }> {
+  const requester = await getProfile();
+  if (requester?.role !== "admin") return { ok: false, error: "Nemáš oprávnenie." };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) return { ok: false, error: "Nepodarilo sa zistiť tvoj email." };
+
+  const { data: rows } = await supabase
+    .from("invoices")
+    .select("id, amount, pdf_path, orders(order_number, customer_name)")
+    .eq("invoice_number", invoiceNumber);
+
+  if (!rows?.length) return { ok: false, error: "Faktúra sa nenašla." };
+
+  const pdfPath = rows[0].pdf_path;
+  if (!pdfPath) return { ok: false, error: "K tejto faktúre nie je archivované PDF." };
+
+  const resend = getResendClient();
+  if (!resend) return { ok: false, error: "RESEND_API_KEY nie je nastavený." };
+
+  const admin = createAdminClient();
+  const { data: fileData, error: downloadError } = await admin.storage.from("invoice-pdfs").download(pdfPath);
+  if (downloadError || !fileData) return { ok: false, error: "PDF sa nepodarilo stiahnuť zo storage." };
+
+  const buffer = Buffer.from(await fileData.arrayBuffer());
+  const totalAmount = rows.reduce((s, r) => s + r.amount, 0);
+  const orderLabels = rows.map(
+    // @ts-expect-error supabase join shape
+    (r) => `${r.orders?.order_number ?? "—"} · ${r.orders?.customer_name ?? "—"}`
+  );
+
+  const { error: sendError } = await resend.emails.send({
+    from: RESEND_FROM_EMAIL,
+    to: user.email,
+    subject: `[TEST] Faktúra ${invoiceNumber}`,
+    text: [
+      "Toto je testovací email — neposlané Petrovi, len na overenie odosielania.",
+      "",
+      `Faktúra č. ${invoiceNumber}`,
+      `Objednávka: ${orderLabels.join(", ")}`,
+      `Suma: ${formatThousands(totalAmount)} €`,
+    ].join("\n"),
+    attachments: [{ filename: `Faktura_${invoiceNumber}.pdf`, content: buffer }],
+  });
+
+  if (sendError) return { ok: false, error: sendError.message };
+  return { ok: true, email: user.email };
+}
+
 export async function markPeterInvoiceIssued(orderId: string, date: string) {
   const requester = await getProfile();
   if (requester?.role !== "admin") return;
