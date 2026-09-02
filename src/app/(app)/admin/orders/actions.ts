@@ -223,11 +223,16 @@ export async function sendGroupedInvoicesToPeter(
     to: peter.email,
     subject: attachments.length === 1 ? `Faktúra ${[...groups.keys()][0]}` : `Faktúry (${attachments.length})`,
     text: [
-      "Posielam faktúry:",
+      "Dobrý deň,",
+      "",
+      "posielam faktúry:",
       "",
       ...summaryLines,
       skipped.length ? "" : null,
       skipped.length ? `Nepodarilo sa pripojiť PDF pre: ${skipped.join(", ")}` : null,
+      "",
+      "S pozdravom,",
+      requester.full_name,
     ]
       .filter((l) => l !== null)
       .join("\n"),
