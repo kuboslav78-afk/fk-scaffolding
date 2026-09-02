@@ -33,6 +33,7 @@ export default async function FuelCardDetailPage({ params }: { params: Promise<{
   ]);
 
   if (!card) notFound();
+  const cardId = card.id;
 
   const total = (transactions ?? []).reduce((s, t) => s + (t.net_amount ?? 0), 0);
   const privateTotal = (transactions ?? [])
@@ -131,7 +132,7 @@ export default async function FuelCardDetailPage({ params }: { params: Promise<{
                     <td className="py-2 pr-3 text-ink-700">{t.place ?? "—"}</td>
                     <td className="whitespace-nowrap py-2 pr-3 text-ink-500">{t.purpose ?? "—"}</td>
                     <td className="whitespace-nowrap py-2 pr-3">
-                      <form action={toggleFuelTransactionPrivate.bind(null, card.id, t.id, !t.is_private)}>
+                      <form action={toggleFuelTransactionPrivate.bind(null, cardId, t.id, !t.is_private)}>
                         <button type="submit" className={t.is_private ? "badge-warning" : "badge-neutral"}>
                           {t.is_private ? "Súkromné" : "Firemné"}
                         </button>
@@ -144,7 +145,7 @@ export default async function FuelCardDetailPage({ params }: { params: Promise<{
                       {t.net_amount != null ? `${formatThousands(t.net_amount)} €` : "—"}
                     </td>
                     <td className="whitespace-nowrap py-2">
-                      <form action={deleteFuelTransaction.bind(null, card.id, t.id)}>
+                      <form action={deleteFuelTransaction.bind(null, cardId, t.id)}>
                         <button type="submit" className="btn-ghost btn-sm text-red-400">
                           Zmazať
                         </button>
