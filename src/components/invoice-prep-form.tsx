@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { addMonthsISO } from "@/lib/dates";
 import { formatThousands } from "@/lib/format";
-import { markOrdersPrepSent } from "@/app/(app)/admin/orders/prep/actions";
+import { markOrdersPrepSent, sendPrepEmailViaResend } from "@/app/(app)/admin/orders/prep/actions";
 
 type Order = {
   id: string;
@@ -45,7 +45,8 @@ export function InvoicePrepForm({
   );
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
   const [justSentIds, setJustSentIds] = useState<string[]>([]);
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
+  const [resendResult, setResendResult] = useState<string | null>(null);
 
   const dueDates = Object.fromEntries(
     orders.map((o) => [o.id, issuedDates[o.id] ? addMonthsISO(issuedDates[o.id], 1) : ""])
@@ -114,6 +115,20 @@ export function InvoicePrepForm({
     setJustSentIds((prev) => [...prev, ...ids]);
     startTransition(() => {
       markOrdersPrepSent(ids);
+    });
+  }
+
+  function handleResendSend() {
+    setResendResult(null);
+    const ids = selectedOrders.map((o) => o.id);
+    startTransition(async () => {
+      const res = await sendPrepEmailViaResend(ids, labels, issuedDates, selectedContactIds);
+      if (res.ok) {
+        setJustSentIds((prev) => [...prev, ...ids]);
+        setResendResult("Odoslané.");
+      } else {
+        setResendResult(`Chyba: ${res.error}`);
+      }
     });
   }
 
@@ -216,7 +231,7 @@ export function InvoicePrepForm({
             ))}
           </div>
 
-          <div className="pt-2">
+          <div className="flex flex-wrap items-center gap-3 pt-2">
             {mailtoHref ? (
               <a href={mailtoHref} onClick={handleSent} className="btn-primary">
                 Pripraviť email ({selectedOrders.length})
@@ -226,15 +241,24 @@ export function InvoicePrepForm({
                 Pripraviť email
               </button>
             )}
-            {!selectedOrders.length && (
-              <p className="mt-2 text-xs text-ink-400">
-                Vyber aspoň jednu objednávku a nastav jej dátum vystavenia.
-              </p>
-            )}
-            {!!selectedOrders.length && !selectedContacts.length && (
-              <p className="mt-2 text-xs text-ink-400">Vyber aspoň jedného príjemcu.</p>
-            )}
+            <button
+              type="button"
+              onClick={handleResendSend}
+              disabled={isPending || !selectedOrders.length || !selectedContacts.length}
+              className="btn-secondary"
+            >
+              {isPending ? "Odosielam…" : `Poslať cez Resend (${selectedOrders.length})`}
+            </button>
+            {resendResult && <p className="text-sm text-ink-600">{resendResult}</p>}
           </div>
+          {!selectedOrders.length && (
+            <p className="mt-2 text-xs text-ink-400">
+              Vyber aspoň jednu objednávku a nastav jej dátum vystavenia.
+            </p>
+          )}
+          {!!selectedOrders.length && !selectedContacts.length && (
+            <p className="mt-2 text-xs text-ink-400">Vyber aspoň jedného príjemcu.</p>
+          )}
         </div>
       )}
     </div>
