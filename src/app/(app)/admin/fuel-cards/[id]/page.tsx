@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/get-profile";
-import { addFuelTransaction, deleteFuelTransaction, updateFuelCard } from "../actions";
+import { addFuelTransaction, deleteFuelTransaction, updateFuelCard, toggleFuelTransactionPrivate } from "../actions";
 import { formatThousands } from "@/lib/format";
 
 const SK_MONTHS = [
@@ -27,7 +27,7 @@ export default async function FuelCardDetailPage({ params }: { params: Promise<{
     supabase.from("fuel_cards").select("id, card_number, holder_name, card_type, valid_until, active").eq("id", id).single(),
     supabase
       .from("fuel_transactions")
-      .select("id, tx_date, place, purpose, vehicle, gross_amount, net_amount")
+      .select("id, tx_date, place, purpose, is_private, gross_amount, net_amount")
       .eq("card_id", id)
       .order("tx_date", { ascending: false }),
   ]);
@@ -35,6 +35,9 @@ export default async function FuelCardDetailPage({ params }: { params: Promise<{
   if (!card) notFound();
 
   const total = (transactions ?? []).reduce((s, t) => s + (t.net_amount ?? 0), 0);
+  const privateTotal = (transactions ?? [])
+    .filter((t) => t.is_private)
+    .reduce((s, t) => s + (t.net_amount ?? 0), 0);
 
   const monthGroups = new Map<string, typeof transactions>();
   for (const t of transactions ?? []) {
@@ -58,6 +61,9 @@ export default async function FuelCardDetailPage({ params }: { params: Promise<{
           <div className="text-right">
             <p className="label">Spolu bez DPH</p>
             <p className="text-3xl font-semibold text-sky-300">{formatThousands(total)} €</p>
+            {privateTotal > 0 && (
+              <p className="mt-1 text-xs text-amber-400">z toho súkromné: {formatThousands(privateTotal)} €</p>
+            )}
           </div>
         </div>
 
@@ -83,10 +89,13 @@ export default async function FuelCardDetailPage({ params }: { params: Promise<{
         <form action={addFuelTransaction.bind(null, card.id)} className="grid grid-cols-2 gap-2 md:grid-cols-6">
           <input type="date" name="tx_date" required className="input" />
           <input type="text" name="place" placeholder="Miesto tankovania" className="input md:col-span-2" />
-          <input type="text" name="purpose" placeholder="Účel" defaultValue="Firemné" className="input" />
-          <input type="text" name="vehicle" placeholder="Vozidlo" className="input" />
+          <input type="text" name="purpose" placeholder="Produkt (napr. Nafta)" className="input" />
           <input type="number" step="0.01" name="net_amount" placeholder="Suma bez DPH (€)" required className="input" />
           <input type="number" step="0.01" name="gross_amount" placeholder="Cena za tank. (€)" className="input" />
+          <label className="flex items-center gap-2 text-sm text-ink-700 md:col-span-1">
+            <input type="checkbox" name="is_private" value="true" />
+            Súkromné
+          </label>
           <button type="submit" className="btn-primary btn-sm col-span-2 md:col-span-1">
             Pridať
           </button>
@@ -108,8 +117,8 @@ export default async function FuelCardDetailPage({ params }: { params: Promise<{
                 <tr className="border-b border-ink-100 text-left text-xs font-medium uppercase tracking-wide text-ink-500">
                   <th className="pb-2 pr-3">Dátum</th>
                   <th className="pb-2 pr-3">Miesto</th>
-                  <th className="pb-2 pr-3">Účel</th>
-                  <th className="pb-2 pr-3">Vozidlo</th>
+                  <th className="pb-2 pr-3">Produkt</th>
+                  <th className="pb-2 pr-3">Typ</th>
                   <th className="pb-2 pr-3">Cena</th>
                   <th className="pb-2 pr-3">Bez DPH</th>
                   <th className="pb-2"></th>
@@ -121,7 +130,13 @@ export default async function FuelCardDetailPage({ params }: { params: Promise<{
                     <td className="whitespace-nowrap py-2 pr-3 text-ink-500">{t.tx_date}</td>
                     <td className="py-2 pr-3 text-ink-700">{t.place ?? "—"}</td>
                     <td className="whitespace-nowrap py-2 pr-3 text-ink-500">{t.purpose ?? "—"}</td>
-                    <td className="whitespace-nowrap py-2 pr-3 text-ink-500">{t.vehicle ?? "—"}</td>
+                    <td className="whitespace-nowrap py-2 pr-3">
+                      <form action={toggleFuelTransactionPrivate.bind(null, card.id, t.id, !t.is_private)}>
+                        <button type="submit" className={t.is_private ? "badge-warning" : "badge-neutral"}>
+                          {t.is_private ? "Súkromné" : "Firemné"}
+                        </button>
+                      </form>
+                    </td>
                     <td className="whitespace-nowrap py-2 pr-3 text-ink-500">
                       {t.gross_amount != null ? `${formatThousands(t.gross_amount)} €` : "—"}
                     </td>

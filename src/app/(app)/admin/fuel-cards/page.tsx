@@ -4,33 +4,41 @@ import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/get-profile";
 import { formatThousands } from "@/lib/format";
 import { FuelImportForm } from "@/components/fuel-import-form";
+import { MONTH_NAMES, parseMonthParam, monthRange } from "@/lib/month";
 
-export default async function FuelCardsPage() {
+export default async function FuelCardsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
   const profile = await getProfile();
   if (!profile) redirect("/login");
   if (profile.role !== "admin") redirect("/dashboard");
+
+  const { month } = await searchParams;
+  const { year, monthIndex } = parseMonthParam(month);
+  const { rangeStart, rangeEnd, prevParam, nextParam } = monthRange(year, monthIndex);
 
   const supabase = await createClient();
 
   const [{ data: cards }, { data: transactions }] = await Promise.all([
     supabase.from("fuel_cards").select("id, card_number, holder_name, card_type, valid_until, active").order("card_number"),
-    supabase.from("fuel_transactions").select("card_id, tx_date, net_amount"),
+    supabase
+      .from("fuel_transactions")
+      .select("card_id, tx_date, net_amount")
+      .gte("tx_date", rangeStart)
+      .lt("tx_date", rangeEnd),
   ]);
 
-  const thisMonth = new Date().toISOString().slice(0, 7);
-
-  const statsByCard = new Map<string, { total: number; thisMonthTotal: number; count: number; lastDate: string | null }>();
+  const statsByCard = new Map<string, { total: number; lastDate: string | null }>();
   for (const t of transactions ?? []) {
-    const s = statsByCard.get(t.card_id) ?? { total: 0, thisMonthTotal: 0, count: 0, lastDate: null };
+    const s = statsByCard.get(t.card_id) ?? { total: 0, lastDate: null };
     s.total += t.net_amount ?? 0;
-    if (t.tx_date?.startsWith(thisMonth)) s.thisMonthTotal += t.net_amount ?? 0;
-    s.count += 1;
     if (!s.lastDate || t.tx_date > s.lastDate) s.lastDate = t.tx_date;
     statsByCard.set(t.card_id, s);
   }
 
   const grandTotal = [...statsByCard.values()].reduce((sum, s) => sum + s.total, 0);
-  const grandThisMonth = [...statsByCard.values()].reduce((sum, s) => sum + s.thisMonthTotal, 0);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 md:px-8 md:py-8">
@@ -38,14 +46,27 @@ export default async function FuelCardsPage() {
 
       <FuelImportForm />
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+      <div className="flex items-center justify-between">
+        <h2 className="font-semibold text-ink-900">
+          {MONTH_NAMES[monthIndex]} {year}
+        </h2>
+        <div className="flex items-center gap-1">
+          <Link href={`/admin/fuel-cards?month=${prevParam}`} className="btn-ghost btn-sm px-2">
+            ←
+          </Link>
+          <Link href="/admin/fuel-cards" className="btn-ghost btn-sm">
+            dnes
+          </Link>
+          <Link href={`/admin/fuel-cards?month=${nextParam}`} className="btn-ghost btn-sm px-2">
+            →
+          </Link>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
         <div className="card p-5">
           <p className="label">Spolu (bez DPH)</p>
           <p className="text-2xl font-semibold text-ink-900">{formatThousands(grandTotal)} €</p>
-        </div>
-        <div className="card p-5">
-          <p className="label">Tento mesiac</p>
-          <p className="text-2xl font-semibold text-ink-900">{formatThousands(grandThisMonth)} €</p>
         </div>
         <div className="card p-5">
           <p className="label">Aktívnych kariet</p>
@@ -61,8 +82,7 @@ export default async function FuelCardsPage() {
               <th className="pb-2 pr-3">Držiteľ</th>
               <th className="pb-2 pr-3">Typ</th>
               <th className="pb-2 pr-3">Platnosť do</th>
-              <th className="pb-2 pr-3">Tento mesiac</th>
-              <th className="pb-2 pr-3">Spolu</th>
+              <th className="pb-2 pr-3">Suma</th>
               <th className="pb-2 pr-3">Posledné tankovanie</th>
               <th className="pb-2"></th>
             </tr>
@@ -80,9 +100,6 @@ export default async function FuelCardsPage() {
                   <td className="whitespace-nowrap py-2.5 pr-3 text-ink-900">{c.holder_name ?? "—"}</td>
                   <td className="whitespace-nowrap py-2.5 pr-3 text-ink-500">{c.card_type ?? "—"}</td>
                   <td className="whitespace-nowrap py-2.5 pr-3 text-ink-500">{c.valid_until ?? "—"}</td>
-                  <td className="whitespace-nowrap py-2.5 pr-3 text-ink-700">
-                    {s ? `${formatThousands(s.thisMonthTotal)} €` : "0.00 €"}
-                  </td>
                   <td className="whitespace-nowrap py-2.5 pr-3">
                     <span className="inline-flex items-center rounded-md bg-sky-400/20 px-1.5 py-0.5 font-semibold text-sky-300">
                       {s ? formatThousands(s.total) : "0.00"} €
