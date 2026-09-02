@@ -61,9 +61,10 @@ export default async function FuelCardDetailPage({ params }: { params: Promise<{
           <div className="text-right">
             <p className="label">Spolu bez DPH</p>
             <p className="text-3xl font-semibold text-sky-300">{formatThousands(total)} €</p>
-            {privateTotal > 0 && (
-              <p className="mt-1 text-xs text-amber-400">z toho súkromné: {formatThousands(privateTotal)} €</p>
-            )}
+            <div className="mt-1.5 flex justify-end gap-3 text-xs">
+              <span className="text-ink-500">Firemné: {formatThousands(total - privateTotal)} €</span>
+              <span className="text-amber-400">Súkromné: {formatThousands(privateTotal)} €</span>
+            </div>
           </div>
         </div>
 
@@ -103,15 +104,14 @@ export default async function FuelCardDetailPage({ params }: { params: Promise<{
       </div>
 
       {[...monthGroups.entries()].map(([ym, rows]) => {
-        const monthTotal = (rows ?? []).reduce((s, t) => s + (t.net_amount ?? 0), 0);
-        return (
-          <div key={ym} className="card overflow-x-auto p-5">
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="font-semibold text-ink-900">{monthLabel(ym)}</h3>
-              <span className="inline-flex items-center rounded-md bg-sky-400/20 px-1.5 py-0.5 font-semibold text-sky-300">
-                {formatThousands(monthTotal)} €
-              </span>
-            </div>
+        const companyRows = (rows ?? []).filter((t) => !t.is_private);
+        const privateRows = (rows ?? []).filter((t) => t.is_private);
+        const companySubtotal = companyRows.reduce((s, t) => s + (t.net_amount ?? 0), 0);
+        const privateSubtotal = privateRows.reduce((s, t) => s + (t.net_amount ?? 0), 0);
+        const monthTotal = companySubtotal + privateSubtotal;
+
+        function txTable(txRows: NonNullable<typeof rows>) {
+          return (
             <table className="w-full min-w-[600px] border-collapse">
               <thead>
                 <tr className="border-b border-ink-100 text-left text-xs font-medium uppercase tracking-wide text-ink-500">
@@ -125,7 +125,7 @@ export default async function FuelCardDetailPage({ params }: { params: Promise<{
                 </tr>
               </thead>
               <tbody>
-                {rows?.map((t) => (
+                {txRows.map((t) => (
                   <tr key={t.id} className="border-b border-ink-100 text-sm">
                     <td className="whitespace-nowrap py-2 pr-3 text-ink-500">{t.tx_date}</td>
                     <td className="py-2 pr-3 text-ink-700">{t.place ?? "—"}</td>
@@ -154,6 +154,37 @@ export default async function FuelCardDetailPage({ params }: { params: Promise<{
                 ))}
               </tbody>
             </table>
+          );
+        }
+
+        return (
+          <div key={ym} className="card space-y-5 overflow-x-auto p-5">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-ink-900">{monthLabel(ym)}</h3>
+              <span className="inline-flex items-center rounded-md bg-sky-400/20 px-1.5 py-0.5 font-semibold text-sky-300">
+                {formatThousands(monthTotal)} €
+              </span>
+            </div>
+
+            {!!companyRows.length && (
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-ink-700">Firemné tankovania</h4>
+                  <span className="text-sm font-medium text-ink-500">{formatThousands(companySubtotal)} €</span>
+                </div>
+                {txTable(companyRows)}
+              </div>
+            )}
+
+            {!!privateRows.length && (
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-amber-400">Súkromné tankovania</h4>
+                  <span className="text-sm font-medium text-amber-400">{formatThousands(privateSubtotal)} €</span>
+                </div>
+                {txTable(privateRows)}
+              </div>
+            )}
           </div>
         );
       })}
