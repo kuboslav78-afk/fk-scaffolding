@@ -28,7 +28,7 @@ export default async function InvoicePrepPage() {
 
   const invoicedOrderIds = new Set((invoices ?? []).map((i) => i.order_id));
   const uninvoicedOrders = (orders ?? [])
-    .filter((o) => !invoicedOrderIds.has(o.id))
+    .filter((o) => !invoicedOrderIds.has(o.id) && o.peter_invoice_issued && o.peter_invoice_date)
     .map((o) => {
       const isHourly = o.work_type === "hodiny";
       const invoiceAmount = computeInvoiceAmount(o);
@@ -61,7 +61,8 @@ export default async function InvoicePrepPage() {
       <div>
         <h2 className="mb-1 font-semibold text-ink-900">Podklady pre faktúry</h2>
         <p className="text-sm text-ink-500">
-          Vyber objednávky bez faktúry, nastav im dátum vystavenia (splatnosť sa dopočíta) a priprav email pre účtovníčku.
+          Objednávka sa tu zobrazí až po nastavení dátumu vystavenia priamo v Objednávkach (tlačidlo
+          "označiť"). Vyber ktoré poslať a priprav email pre účtovníčku.
         </p>
       </div>
 

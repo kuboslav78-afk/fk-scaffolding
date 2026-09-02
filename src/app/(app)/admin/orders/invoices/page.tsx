@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile } from "@/lib/get-profile";
 import { OrdersSubnav } from "@/components/orders-subnav";
 import { InvoicesTable, type InvoiceGroup } from "@/components/invoices-table";
+import { MONTH_NAMES, parseMonthParam, monthRange } from "@/lib/month";
 
 function contractsLabel(count: number) {
   if (count === 1) return "1 zmluva";
@@ -12,10 +13,18 @@ function contractsLabel(count: number) {
   return `${count} zmlúv`;
 }
 
-export default async function InvoicesPage() {
+export default async function InvoicesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
   const profile = await getProfile();
   if (!profile) redirect("/login");
   if (profile.role !== "admin") redirect("/dashboard");
+
+  const { month } = await searchParams;
+  const { year, monthIndex } = parseMonthParam(month);
+  const { rangeStart, rangeEnd, prevParam, nextParam } = monthRange(year, monthIndex);
 
   const supabase = await createClient();
 
@@ -25,8 +34,9 @@ export default async function InvoicesPage() {
       .select(
         "id, invoice_number, amount, issued_date, due_date, sent, paid, pdf_path, orders(order_number, customer_name, sites(name, short_name))"
       )
-      .order("issued_date", { ascending: false })
-      .limit(200),
+      .gte("issued_date", rangeStart)
+      .lt("issued_date", rangeEnd)
+      .order("issued_date", { ascending: false }),
     supabase.from("email_contacts").select("name, email"),
   ]);
 
@@ -102,6 +112,23 @@ export default async function InvoicesPage() {
       </div>
 
       <OrdersSubnav active="invoices" />
+
+      <div className="flex items-center justify-between">
+        <h2 className="font-semibold text-ink-900">
+          {MONTH_NAMES[monthIndex]} {year}
+        </h2>
+        <div className="flex items-center gap-1">
+          <Link href={`/admin/orders/invoices?month=${prevParam}`} className="btn-ghost btn-sm px-2">
+            ←
+          </Link>
+          <Link href="/admin/orders/invoices" className="btn-ghost btn-sm">
+            dnes
+          </Link>
+          <Link href={`/admin/orders/invoices?month=${nextParam}`} className="btn-ghost btn-sm px-2">
+            →
+          </Link>
+        </div>
+      </div>
 
       <InvoicesTable groups={groups} peterEmail={peterContact?.email ?? null} adminName={profile.full_name} />
     </div>
