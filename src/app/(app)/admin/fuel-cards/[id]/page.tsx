@@ -2,7 +2,14 @@ import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/get-profile";
-import { addFuelTransaction, deleteFuelTransaction, updateFuelCard, toggleFuelTransactionPrivate } from "../actions";
+import {
+  addFuelTransaction,
+  deleteFuelTransaction,
+  updateFuelCard,
+  toggleFuelTransactionPrivate,
+  toggleFuelTransactionPaid,
+  updateFuelTransactionNote,
+} from "../actions";
 import { formatThousands } from "@/lib/format";
 
 const SK_MONTHS = [
@@ -27,7 +34,7 @@ export default async function FuelCardDetailPage({ params }: { params: Promise<{
     supabase.from("fuel_cards").select("id, card_number, holder_name, card_type, valid_until, active").eq("id", id).single(),
     supabase
       .from("fuel_transactions")
-      .select("id, tx_date, place, purpose, is_private, gross_amount, net_amount")
+      .select("id, tx_date, place, purpose, is_private, private_note, private_paid, gross_amount, net_amount")
       .eq("card_id", id)
       .order("tx_date", { ascending: false }),
   ]);
@@ -36,9 +43,10 @@ export default async function FuelCardDetailPage({ params }: { params: Promise<{
   const cardId = card.id;
 
   const total = (transactions ?? []).reduce((s, t) => s + (t.net_amount ?? 0), 0);
-  const privateTotal = (transactions ?? [])
-    .filter((t) => t.is_private)
-    .reduce((s, t) => s + (t.net_amount ?? 0), 0);
+  const allPrivateRows = (transactions ?? []).filter((t) => t.is_private);
+  const privateTotal = allPrivateRows.reduce((s, t) => s + (t.net_amount ?? 0), 0);
+  const privatePaidTotal = allPrivateRows.filter((t) => t.private_paid).reduce((s, t) => s + (t.net_amount ?? 0), 0);
+  const privateUnpaidTotal = privateTotal - privatePaidTotal;
 
   const monthGroups = new Map<string, typeof transactions>();
   for (const t of transactions ?? []) {
@@ -66,6 +74,12 @@ export default async function FuelCardDetailPage({ params }: { params: Promise<{
               <span className="text-ink-500">Firemné: {formatThousands(total - privateTotal)} €</span>
               <span className="text-amber-400">Súkromné: {formatThousands(privateTotal)} €</span>
             </div>
+            {privateTotal > 0 && (
+              <div className="mt-1 flex justify-end gap-3 text-xs">
+                <span className="text-emerald-400">Vyplatené: {formatThousands(privatePaidTotal)} €</span>
+                <span className="text-red-400">Nevyplatené: {formatThousands(privateUnpaidTotal)} €</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -98,6 +112,12 @@ export default async function FuelCardDetailPage({ params }: { params: Promise<{
             <input type="checkbox" name="is_private" value="true" />
             Súkromné
           </label>
+          <input
+            type="text"
+            name="private_note"
+            placeholder="Poznámka (napr. dedkove tankovanie)"
+            className="input md:col-span-2"
+          />
           <button type="submit" className="btn-primary btn-sm col-span-2 md:col-span-1">
             Pridať
           </button>
@@ -109,9 +129,11 @@ export default async function FuelCardDetailPage({ params }: { params: Promise<{
         const privateRows = (rows ?? []).filter((t) => t.is_private);
         const companySubtotal = companyRows.reduce((s, t) => s + (t.net_amount ?? 0), 0);
         const privateSubtotal = privateRows.reduce((s, t) => s + (t.net_amount ?? 0), 0);
+        const privatePaidSubtotal = privateRows.filter((t) => t.private_paid).reduce((s, t) => s + (t.net_amount ?? 0), 0);
+        const privateUnpaidSubtotal = privateSubtotal - privatePaidSubtotal;
         const monthTotal = companySubtotal + privateSubtotal;
 
-        function txTable(txRows: NonNullable<typeof rows>) {
+        function txTable(txRows: NonNullable<typeof rows>, showPrivateCols: boolean) {
           return (
             <table className="w-full min-w-[600px] border-collapse">
               <thead>
@@ -120,8 +142,10 @@ export default async function FuelCardDetailPage({ params }: { params: Promise<{
                   <th className="pb-2 pr-3">Miesto</th>
                   <th className="pb-2 pr-3">Produkt</th>
                   <th className="pb-2 pr-3">Typ</th>
+                  {showPrivateCols && <th className="pb-2 pr-3">Poznámka</th>}
                   <th className="pb-2 pr-3">Cena</th>
                   <th className="pb-2 pr-3">Bez DPH</th>
+                  {showPrivateCols && <th className="pb-2 pr-3">Vyplatené</th>}
                   <th className="pb-2"></th>
                 </tr>
               </thead>
@@ -138,12 +162,40 @@ export default async function FuelCardDetailPage({ params }: { params: Promise<{
                         </button>
                       </form>
                     </td>
+                    {showPrivateCols && (
+                      <td className="py-2 pr-3">
+                        <form
+                          action={updateFuelTransactionNote.bind(null, cardId, t.id)}
+                          className="flex items-center gap-1"
+                        >
+                          <input
+                            type="text"
+                            name="private_note"
+                            defaultValue={t.private_note ?? ""}
+                            placeholder="napr. dedkove tankovanie"
+                            className="w-[160px] rounded-lg border border-ink-200 px-1.5 py-1 text-xs"
+                          />
+                          <button type="submit" className="btn-ghost btn-sm">
+                            Uložiť
+                          </button>
+                        </form>
+                      </td>
+                    )}
                     <td className="whitespace-nowrap py-2 pr-3 text-ink-500">
                       {t.gross_amount != null ? `${formatThousands(t.gross_amount)} €` : "—"}
                     </td>
                     <td className="whitespace-nowrap py-2 pr-3 text-ink-900">
                       {t.net_amount != null ? `${formatThousands(t.net_amount)} €` : "—"}
                     </td>
+                    {showPrivateCols && (
+                      <td className="whitespace-nowrap py-2 pr-3">
+                        <form action={toggleFuelTransactionPaid.bind(null, cardId, t.id, !t.private_paid)}>
+                          <button type="submit" className={t.private_paid ? "badge-success" : "badge-neutral"}>
+                            {t.private_paid ? "✓ Vyplatené" : "Nevyplatené"}
+                          </button>
+                        </form>
+                      </td>
+                    )}
                     <td className="whitespace-nowrap py-2">
                       <form action={deleteFuelTransaction.bind(null, cardId, t.id)}>
                         <button type="submit" className="btn-ghost btn-sm text-red-400">
@@ -173,17 +225,23 @@ export default async function FuelCardDetailPage({ params }: { params: Promise<{
                   <h4 className="text-sm font-medium text-ink-700">Firemné tankovania</h4>
                   <span className="text-sm font-medium text-ink-500">{formatThousands(companySubtotal)} €</span>
                 </div>
-                {txTable(companyRows)}
+                {txTable(companyRows, false)}
               </div>
             )}
 
             {!!privateRows.length && (
               <div>
-                <div className="mb-2 flex items-center justify-between">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-1">
                   <h4 className="text-sm font-medium text-amber-400">Súkromné tankovania</h4>
-                  <span className="text-sm font-medium text-amber-400">{formatThousands(privateSubtotal)} €</span>
+                  <span className="text-xs text-ink-500">
+                    <span className="text-emerald-400">vyplatené {formatThousands(privatePaidSubtotal)} €</span>
+                    {" · "}
+                    <span className="text-red-400">nevyplatené {formatThousands(privateUnpaidSubtotal)} €</span>
+                    {" · "}
+                    <span className="font-medium text-amber-400">spolu {formatThousands(privateSubtotal)} €</span>
+                  </span>
                 </div>
-                {txTable(privateRows)}
+                {txTable(privateRows, true)}
               </div>
             )}
           </div>

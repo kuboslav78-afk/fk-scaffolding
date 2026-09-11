@@ -16,6 +16,7 @@ export async function addFuelTransaction(cardId: string, formData: FormData) {
     place: formData.get("place") || null,
     purpose: formData.get("purpose") || null,
     is_private: formData.get("is_private") === "true",
+    private_note: formData.get("private_note") || null,
     gross_amount: formData.get("gross_amount") || null,
     net_amount: formData.get("net_amount") || null,
   });
@@ -44,6 +45,30 @@ export async function toggleFuelTransactionPrivate(cardId: string, transactionId
 
   revalidatePath(`/admin/fuel-cards/${cardId}`);
   revalidatePath("/admin/fuel-cards");
+}
+
+export async function toggleFuelTransactionPaid(cardId: string, transactionId: string, paid: boolean) {
+  const requester = await getProfile();
+  if (requester?.role !== "admin") return;
+
+  const supabase = await createClient();
+  await supabase.from("fuel_transactions").update({ private_paid: paid }).eq("id", transactionId);
+
+  revalidatePath(`/admin/fuel-cards/${cardId}`);
+  revalidatePath("/admin/fuel-cards");
+}
+
+export async function updateFuelTransactionNote(cardId: string, transactionId: string, formData: FormData) {
+  const requester = await getProfile();
+  if (requester?.role !== "admin") return;
+
+  const supabase = await createClient();
+  await supabase
+    .from("fuel_transactions")
+    .update({ private_note: formData.get("private_note") || null })
+    .eq("id", transactionId);
+
+  revalidatePath(`/admin/fuel-cards/${cardId}`);
 }
 
 export type FuelImportResult =
