@@ -31,7 +31,7 @@ export function WeekAssignmentCell({
           setValue(next);
           startTransition(() => upsertAssignment(employeeId, date, next));
         }}
-        className="w-full min-w-[140px] rounded-lg border border-ink-200 bg-[#141210] px-1.5 py-1 text-xs text-ink-900 focus:border-brand-500 focus:outline-none"
+        className="w-full min-w-[140px] rounded-lg border border-ink-200 bg-card px-1.5 py-1 text-xs text-ink-900 focus:border-brand-500 focus:outline-none"
       >
         <option value="">—</option>
         {sites.map((s) => (

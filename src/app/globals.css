@@ -1,9 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  /* "Nočná zmena" — appka beží natrvalo v tmavej téme, žiadny light/dark prepínač */
+  /* "Nočná zmena" — predvolená téma je tmavá, prepínač na svetlú je v sidebar dole pri mene. */
   --background: #0a0908;
   --foreground: #f2ede2;
+  --surface: #141210;
+  --card: #1c1a17;
 
   --color-brand-50: #fef8ee;
   --color-brand-100: #fdedd2;
@@ -30,9 +32,31 @@
   --color-ink-950: #f2ede2;
 }
 
+/* Svetlá téma — presný obrat tmavej škály (rovnaké odtiene, opačný smer). Brand farby ostávajú rovnaké. */
+:root[data-theme="light"] {
+  --background: #f7f4ee;
+  --foreground: #16140f;
+  --surface: #ffffff;
+  --card: #fbf9f5;
+
+  --color-ink-50: #f2ede2;
+  --color-ink-100: #e3ddd0;
+  --color-ink-200: #cfc7b8;
+  --color-ink-300: #b7ad9e;
+  --color-ink-400: #9a9186;
+  --color-ink-500: #797365;
+  --color-ink-600: #5c574d;
+  --color-ink-700: #453f36;
+  --color-ink-800: #332f28;
+  --color-ink-900: #211e19;
+  --color-ink-950: #16140f;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-card: var(--card);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
@@ -125,7 +149,7 @@ body {
 
 @layer components {
   .card {
-    @apply rounded-xl border border-ink-100 bg-[#1c1a17] shadow-[0_1px_2px_rgba(0,0,0,0.3)];
+    @apply rounded-xl border border-ink-100 bg-card shadow-[0_1px_2px_rgba(0,0,0,0.3)];
   }
 
   .btn-primary {
@@ -145,7 +169,7 @@ body {
   }
 
   .input {
-    @apply w-full rounded-lg border border-ink-200 bg-[#141210] px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20;
+    @apply w-full rounded-lg border border-ink-200 bg-card px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20;
   }
   .label {
     @apply mb-1 block text-xs font-medium text-ink-600;

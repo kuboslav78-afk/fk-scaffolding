@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signOut } from "@/app/actions";
 import { ScaffoldDecoration } from "@/components/scaffold-decoration";
 import { CosmicDustBackground } from "@/components/cosmic-dust-background";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { getStoredTheme, type Theme } from "@/lib/theme";
 
 type NavItem = {
   href: string;
@@ -129,14 +131,22 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [theme, setTheme] = useState<Theme>("dark");
+
+  useEffect(() => {
+    setTheme(getStoredTheme());
+    const handler = (e: Event) => setTheme((e as CustomEvent<Theme>).detail);
+    window.addEventListener("themechange", handler);
+    return () => window.removeEventListener("themechange", handler);
+  }, []);
 
   return (
-    <div className="relative flex min-h-screen overflow-hidden bg-[#0a0908]">
-      <CosmicDustBackground />
+    <div className="relative flex min-h-screen overflow-hidden bg-background">
+      {theme === "dark" && <CosmicDustBackground />}
       <ScaffoldDecoration side="right" />
 
       {/* Desktop sidebar */}
-      <aside className="relative z-10 hidden w-60 shrink-0 flex-col border-r border-ink-100 bg-[#141210] md:flex">
+      <aside className="relative z-10 hidden w-60 shrink-0 flex-col border-r border-ink-100 bg-surface md:flex">
         <div className="flex items-center gap-2 px-5 py-5">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#ffcf7a] to-[#f0a23a] text-xs font-bold text-[#241a06] shadow-[0_0_16px_-2px_rgba(240,162,58,0.7)]">
             FK
@@ -146,8 +156,9 @@ export function AppShell({
         <div className="flex-1 px-3">
           <NavLinks role={role} />
         </div>
-        <div className="border-t border-ink-100 p-3">
-          <div className="mb-2 truncate px-2 text-xs text-ink-500">{fullName}</div>
+        <div className="space-y-2 border-t border-ink-100 p-3">
+          <ThemeToggle />
+          <div className="truncate px-2 text-xs text-ink-500">{fullName}</div>
           <form action={signOut}>
             <button className="btn-ghost w-full justify-start px-2">Odhlásiť sa</button>
           </form>
@@ -156,7 +167,7 @@ export function AppShell({
 
       <div className="relative z-10 flex min-w-0 flex-1 flex-col">
         {/* Mobile topbar */}
-        <div className="flex items-center justify-between border-b border-ink-100 bg-[#141210] px-4 py-3 md:hidden">
+        <div className="flex items-center justify-between border-b border-ink-100 bg-surface px-4 py-3 md:hidden">
           <div className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#ffcf7a] to-[#f0a23a] text-xs font-bold text-[#241a06] shadow-[0_0_16px_-2px_rgba(240,162,58,0.7)]">
               FK
@@ -180,7 +191,7 @@ export function AppShell({
       {mobileOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div className="absolute inset-0 bg-black/60" onClick={() => setMobileOpen(false)} />
-          <div className="absolute inset-y-0 left-0 flex w-64 flex-col bg-[#141210] p-4 shadow-xl">
+          <div className="absolute inset-y-0 left-0 flex w-64 flex-col bg-surface p-4 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <span className="font-semibold text-ink-900">FK Scaffolding</span>
               <button
@@ -194,8 +205,9 @@ export function AppShell({
               </button>
             </div>
             <NavLinks role={role} onNavigate={() => setMobileOpen(false)} />
-            <div className="mt-auto border-t border-ink-100 pt-3">
-              <div className="mb-2 truncate px-2 text-xs text-ink-500">{fullName}</div>
+            <div className="mt-auto space-y-2 border-t border-ink-100 pt-3">
+              <ThemeToggle />
+              <div className="truncate px-2 text-xs text-ink-500">{fullName}</div>
               <form action={signOut}>
                 <button className="btn-ghost w-full justify-start px-2">Odhlásiť sa</button>
               </form>

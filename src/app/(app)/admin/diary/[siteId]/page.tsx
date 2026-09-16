@@ -68,8 +68,8 @@ export default async function DiaryCalendarPage({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-ink-100 bg-[#1c1a17]">
-        <div className="grid grid-cols-7 border-b border-ink-100 bg-[#141210]">
+      <div className="overflow-hidden rounded-2xl border border-ink-100 bg-card">
+        <div className="grid grid-cols-7 border-b border-ink-100 bg-surface">
           {DAY_NAMES_SHORT.map((d) => (
             <div
               key={d}
