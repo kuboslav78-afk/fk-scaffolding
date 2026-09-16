@@ -145,8 +145,13 @@ export function EditableOrderRow({
           <span className="ml-1.5 text-xs text-ink-400">{order.customer_name.split(" ")[0]}</span>
         )}
       </td>
-      <td className="truncate overflow-hidden py-2.5 pr-2 text-ink-700" title={order.siteName}>
-        {order.siteName}
+      <td className="py-2.5 pr-2 text-ink-700">
+        <div className="group relative">
+          <div className="truncate overflow-hidden">{order.siteName}</div>
+          <div className="pointer-events-none absolute left-0 top-full z-30 mt-1 hidden w-max max-w-xs rounded-lg border border-ink-200 bg-card px-2.5 py-1.5 text-xs whitespace-normal text-ink-900 shadow-lg group-hover:block">
+            {order.siteName}
+          </div>
+        </div>
       </td>
       <td className="whitespace-nowrap py-2.5 pr-2 text-ink-500">
         {order.handover_date ? formatDateSK(order.handover_date) : "—"}
