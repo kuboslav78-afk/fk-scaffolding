@@ -8,7 +8,7 @@ import {
   unmarkPeterInvoiceIssued,
 } from "@/app/(app)/admin/orders/actions";
 import { DeleteOrderButton } from "@/components/delete-order-button";
-import { todayISO, formatDateSK } from "@/lib/dates";
+import { todayISO, formatDateShort } from "@/lib/dates";
 import { computeInvoiceAmount } from "@/lib/order-amount";
 import { formatThousands } from "@/lib/format";
 
@@ -148,8 +148,8 @@ export function EditableOrderRow({
       <td className="truncate overflow-hidden py-2.5 pr-2 text-ink-700" title={order.siteName}>
         {order.siteName}
       </td>
-      <td className="whitespace-nowrap py-2.5 pr-2 text-ink-500">
-        {order.handover_date ? formatDateSK(order.handover_date) : "—"}
+      <td className="truncate overflow-hidden py-2.5 pr-2 text-ink-500">
+        {order.handover_date ? formatDateShort(order.handover_date) : "—"}
       </td>
       <td className="whitespace-nowrap py-2.5 pr-2">
         {myInvoiceAmount != null ? (

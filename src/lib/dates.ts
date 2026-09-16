@@ -55,6 +55,12 @@ export function formatDateSK(iso: string): string {
   return `${d}. ${SK_MONTHS[m - 1]} ${y}`;
 }
 
+/** Kompaktný číselný formát (napr. "31.8.2026") — na miesta, kde sa dlhé mesiace (september, november...) nezmestia. */
+export function formatDateShort(iso: string): string {
+  const { y, m, d } = parseISODate(iso);
+  return `${d}.${m}.${y}`;
+}
+
 /** Nemecké/ISO číslo pracovného týždňa (KW) pre daný dátum. */
 export function isoWeekNumber(iso: string): number {
   const { y, m, d } = parseISODate(iso);

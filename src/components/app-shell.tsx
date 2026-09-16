@@ -1,13 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { signOut } from "@/app/actions";
 import { ScaffoldDecoration } from "@/components/scaffold-decoration";
-import { CosmicDustBackground } from "@/components/cosmic-dust-background";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getStoredTheme, type Theme } from "@/lib/theme";
+
+// Ťažká Three.js scéna (bloom shader) — dynamický import, aby sa jej kód (aj celá knižnica three)
+// nesťahoval a neparsoval na každej stránke, len keď je naozaj potrebná (tmavý režim).
+const CosmicDustBackground = dynamic(
+  () => import("@/components/cosmic-dust-background").then((m) => m.CosmicDustBackground),
+  { ssr: false }
+);
 
 type NavItem = {
   href: string;
