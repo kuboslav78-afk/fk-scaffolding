@@ -79,14 +79,15 @@ export default async function InvoicesPage({
   const groupsWithPdf = groupsArr.filter((g) => g.pdfPath);
   if (groupsWithPdf.length) {
     const admin = createAdminClient();
-    const { data: signedUrls } = await admin.storage
-      .from("invoice-pdfs")
-      .createSignedUrls(
-        groupsWithPdf.map((g) => g.pdfPath as string),
-        3600
-      );
+    const signedUrls = await Promise.all(
+      groupsWithPdf.map((g) =>
+        admin.storage
+          .from("invoice-pdfs")
+          .createSignedUrl(g.pdfPath as string, 3600, { download: `Faktura_${g.invoiceNumber}.pdf` })
+      )
+    );
     groupsWithPdf.forEach((g, i) => {
-      const url = signedUrls?.[i]?.signedUrl;
+      const url = signedUrls[i]?.data?.signedUrl;
       if (url) pdfUrlByInvoiceNumber.set(g.invoiceNumber, url);
     });
   }

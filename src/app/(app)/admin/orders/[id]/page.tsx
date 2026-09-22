@@ -41,7 +41,9 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   let pdfUrl: string | null = null;
   if (order.pdf_path) {
     const admin = createAdminClient();
-    const { data: signed } = await admin.storage.from("order-pdfs").createSignedUrl(order.pdf_path, 3600);
+    const { data: signed } = await admin.storage
+      .from("order-pdfs")
+      .createSignedUrl(order.pdf_path, 3600, { download: `Objednavka_${order.order_number ?? order.id}.pdf` });
     pdfUrl = signed?.signedUrl ?? null;
   }
 

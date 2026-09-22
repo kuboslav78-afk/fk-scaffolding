@@ -74,14 +74,15 @@ export default async function OrdersPage({
   const ordersWithPdf = (monthOrders ?? []).filter((o) => o.pdf_path);
   if (ordersWithPdf.length) {
     const admin = createAdminClient();
-    const { data: signedUrls } = await admin.storage
-      .from("order-pdfs")
-      .createSignedUrls(
-        ordersWithPdf.map((o) => o.pdf_path as string),
-        3600
-      );
+    const signedUrls = await Promise.all(
+      ordersWithPdf.map((o) =>
+        admin.storage
+          .from("order-pdfs")
+          .createSignedUrl(o.pdf_path as string, 3600, { download: `Objednavka_${o.order_number ?? o.id}.pdf` })
+      )
+    );
     ordersWithPdf.forEach((o, i) => {
-      const url = signedUrls?.[i]?.signedUrl;
+      const url = signedUrls[i]?.data?.signedUrl;
       if (url) pdfUrlByOrder.set(o.id, url);
     });
   }
