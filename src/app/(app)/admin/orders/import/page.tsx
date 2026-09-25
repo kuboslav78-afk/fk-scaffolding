@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/get-profile";
 import { OrdersSubnav } from "@/components/orders-subnav";
 import { ImportInvoicesForm } from "@/components/import-invoices-form";
@@ -7,6 +8,13 @@ export default async function ImportInvoicesPage() {
   const profile = await getProfile();
   if (!profile) redirect("/login");
   if (profile.role !== "admin") redirect("/dashboard");
+
+  const supabase = await createClient();
+  const { data: orders } = await supabase
+    .from("orders")
+    .select("id, order_number, customer_name, sites(name, short_name)")
+    .order("order_date", { ascending: false })
+    .limit(300);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 md:px-8 md:py-8">
@@ -22,7 +30,7 @@ export default async function ImportInvoicesPage() {
         </p>
       </div>
 
-      <ImportInvoicesForm />
+      <ImportInvoicesForm orders={orders ?? []} />
     </div>
   );
 }

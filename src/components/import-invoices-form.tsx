@@ -10,6 +10,18 @@ import {
 } from "@/app/(app)/admin/orders/import/actions";
 import { todayISO } from "@/lib/dates";
 
+type PickerOrder = {
+  id: string;
+  order_number: string | null;
+  customer_name: string | null;
+  sites: { name: string | null; short_name: string | null }[] | null;
+};
+
+function orderRef(o: PickerOrder): string {
+  const site = o.sites?.[0];
+  return o.order_number ?? site?.short_name ?? site?.name ?? "";
+}
+
 function emptyRow(key: string): ImportRow {
   return {
     key,
@@ -36,7 +48,7 @@ function nextKey() {
   return `row-${rowCounter}`;
 }
 
-export function ImportInvoicesForm() {
+export function ImportInvoicesForm({ orders }: { orders: PickerOrder[] }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [rows, setRows] = useState<ImportRow[]>([]);
   const [rowNotes, setRowNotes] = useState<Record<string, string>>({});
@@ -198,6 +210,8 @@ export function ImportInvoicesForm() {
             {rows.map((row) => {
               const rowChecked = checkedByKey.get(row.key);
               const note = rowNotes[row.key];
+              const needsManualPick =
+                !!note || rowChecked?.status === "not_found" || rowChecked?.status === "ambiguous";
               return (
                 <tr key={row.key} className="border-b border-ink-100 align-top text-sm">
                   <td className="py-2 pr-3">
@@ -209,6 +223,23 @@ export function ImportInvoicesForm() {
                       className="input w-28"
                     />
                     {note && <p className="mt-1 max-w-[160px] text-[11px] text-amber-400">{note}</p>}
+                    {needsManualPick && (
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          const order = orders.find((o) => o.id === e.target.value);
+                          if (order) updateRow(row.key, { orderNumber: orderRef(order) });
+                        }}
+                        className="input mt-1 w-40 text-xs"
+                      >
+                        <option value="">Priradiť k objednávke ručne…</option>
+                        {orders.map((o) => (
+                          <option key={o.id} value={o.id}>
+                            {orderRef(o) || "—"} · {o.customer_name ?? "bez zákazníka"}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </td>
                   <td className="py-2 pr-3">
                     <input
