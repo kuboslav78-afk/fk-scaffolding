@@ -22,12 +22,12 @@ export type ParsedFuelStatement = {
  * Riadok transakcie má tvar (stĺpce podľa hlavičky výkazu):
  * "17.07.2026 Nafta ARAL,NürnbergLangwasser 11210 DEU 2023059 0 30,89 LTR 19,00 VO EUR 2,3106 59,97 1,28 61,25 72,89 61,25 72,89"
  * Dátum, Produkt (môže mať čiarku, napr. "Super, natural"), Miesto dodania ("Značka,Mesto" — čiarka BEZ medzery),
- * Č. Miesta, sLd (krajina), Číslo dokladu, Km stav, Množstvo, jednotka, DPH%, Druh DPH, EUR, J.cena brutto,
- * a napokon 4-6 súm (posledné 4 sú vždy Spolu netto/brutto v pôvodnej mene a znova v EUR — "Servis netto"
- * stĺpec pred nimi chýba v texte, keď je nulový, preto berieme vždy posledné 4 čísla na riadku, nie pevný počet).
+ * Č. Miesta, sLd (krajina), Číslo dokladu, Km stav, Množstvo, jednotka, DPH%, Druh DPH, mena (EUR/CZK…), J.cena brutto,
+ * a napokon 4-6 súm (posledné 2 sú vždy Spolu netto/brutto v EUR; pri cudzej mene, napr. CZK, sú predtým sumy
+ * v pôvodnej mene s tisícovým bodkou "2.338,55" — preto berieme vždy posledné 2 čísla na riadku).
  */
 const TX_RE =
-  /(\d{2}\.\d{2}\.\d{4})\s+(.+?)\s+(\d+)\s+([A-Z]{3})\s+(\S+)\s+(\d+)\s+([\d,]+)\s+(LTR|PCE|KG|HRS|KWH)\s+([\d,]+)\s+(\S+)\s+EUR\s+([\d,]+)\s+([^\n]+)/g;
+  /(\d{2}\.\d{2}\.\d{4})\s+(.+?)\s+(\d+)\s+([A-Z]{3})\s+(\S+)\s+(\d+)\s+([\d,]+)\s+(LTR|PCE|KG|HRS|KWH)\s+([\d,]+)\s+(\S+)\s+[A-Z]{3}\s+([\d.,]+)\s+([^\n]+)/g;
 
 const CARD_RE = /EČV:\s*KARTA\s*(\d+)/g;
 
@@ -68,10 +68,11 @@ export async function parseFuelStatementPdf(buffer: Buffer): Promise<ParsedFuelS
   while ((m = TX_RE.exec(text))) {
     const [, dateRaw, middleBlob, , , docNumber, , , , , , , restOfLine] = m;
 
-    const nums = restOfLine.trim().split(/\s+/).filter((t) => /^[\d,]+$/.test(t));
-    if (nums.length < 4) continue;
-    const netAmount = toNumber(nums[nums.length - 4]);
-    const grossAmount = toNumber(nums[nums.length - 3]);
+    const nums = restOfLine.trim().split(/\s+/).filter((t) => /^[\d.,]+$/.test(t));
+    if (nums.length < 2) continue;
+    // Posledné 2 čísla sú vždy Spolu netto/brutto v EUR (aj pri riadkoch v CZK a pod.)
+    const netAmount = toNumber(nums[nums.length - 2]);
+    const grossAmount = toNumber(nums[nums.length - 1]);
 
     const { product, place } = splitProductPlace(middleBlob);
 
