@@ -6,7 +6,8 @@ import { InvoicePrepForm } from "@/components/invoice-prep-form";
 import { DeleteContactButton } from "@/components/delete-contact-button";
 import { isoWeekNumber } from "@/lib/dates";
 import { computeInvoiceAmount } from "@/lib/order-amount";
-import { addContact } from "./actions";
+import { getPaymentTermDays } from "@/lib/settings";
+import { addContact, updatePaymentTermDays } from "./actions";
 
 export default async function InvoicePrepPage() {
   const profile = await getProfile();
@@ -14,6 +15,7 @@ export default async function InvoicePrepPage() {
   if (profile.role !== "admin") redirect("/dashboard");
 
   const supabase = await createClient();
+  const paymentTermDays = await getPaymentTermDays();
 
   const [{ data: orders }, { data: invoices }, { data: contacts }] = await Promise.all([
     supabase
@@ -66,7 +68,32 @@ export default async function InvoicePrepPage() {
         </p>
       </div>
 
-      <InvoicePrepForm orders={uninvoicedOrders} contacts={contacts ?? []} adminName={profile.full_name} />
+      <InvoicePrepForm orders={uninvoicedOrders} contacts={contacts ?? []} adminName={profile.full_name}
+        paymentTermDays={paymentTermDays}
+      />
+
+      <div className="card space-y-3 p-5">
+        <h2 className="font-semibold text-ink-900">Splatnosť faktúr</h2>
+        <p className="text-sm text-ink-500">
+          Počet dní od dátumu vystavenia. Platí pre všetky nové podklady a faktúry; už uložené faktúry sa nemenia.
+        </p>
+        <form action={updatePaymentTermDays} className="flex flex-wrap items-center gap-2">
+          <input
+            type="number"
+            name="days"
+            min={1}
+            max={365}
+            step={1}
+            defaultValue={paymentTermDays}
+            required
+            className="input w-24"
+          />
+          <span className="text-sm text-ink-700">dní</span>
+          <button type="submit" className="btn-primary btn-sm">
+            Uložiť
+          </button>
+        </form>
+      </div>
 
       <div className="card space-y-3 p-5">
         <h2 className="font-semibold text-ink-900">Kontakty</h2>

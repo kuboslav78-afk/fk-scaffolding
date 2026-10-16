@@ -8,7 +8,7 @@ import {
   sendGroupedInvoicesToPeter,
   sendTestInvoiceEmail,
 } from "@/app/(app)/admin/orders/actions";
-import { addMonthsISO } from "@/lib/dates";
+import { addDaysISO } from "@/lib/dates";
 import { formatThousands } from "@/lib/format";
 
 const TABLE_COLS = 9;
@@ -43,16 +43,18 @@ function GroupedInvoiceRow({
   peterEmail,
   selected,
   onToggleSelect,
+  paymentTermDays,
 }: {
   group: InvoiceGroup;
   peterEmail: string | null;
+  paymentTermDays: number;
   selected: boolean;
   onToggleSelect: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [issuedDate, setIssuedDate] = useState(group.issued_date);
-  const [dueDate, setDueDate] = useState(group.due_date ?? addMonthsISO(group.issued_date, 1));
+  const [dueDate, setDueDate] = useState(group.due_date ?? addDaysISO(group.issued_date, paymentTermDays));
   const [testResult, setTestResult] = useState<string | null>(null);
   const [isTestPending, startTestTransition] = useTransition();
 
@@ -113,7 +115,7 @@ function GroupedInvoiceRow({
                 onChange={(e) => {
                   const nextIssued = e.target.value;
                   setIssuedDate(nextIssued);
-                  setDueDate(addMonthsISO(nextIssued, 1));
+                  setDueDate(addDaysISO(nextIssued, paymentTermDays));
                 }}
                 required
                 className="input"
@@ -231,7 +233,9 @@ export function InvoicesTable({
   groups,
   peterEmail,
   adminName,
+  paymentTermDays,
 }: {
+  paymentTermDays: number;
   groups: InvoiceGroup[];
   peterEmail: string | null;
   adminName: string;
@@ -329,6 +333,7 @@ export function InvoicesTable({
                 key={g.invoiceNumber}
                 group={g}
                 peterEmail={peterEmail}
+                paymentTermDays={paymentTermDays}
                 selected={!!selected[g.invoiceNumber]}
                 onToggleSelect={() =>
                   setSelected((s) => ({ ...s, [g.invoiceNumber]: !s[g.invoiceNumber] }))

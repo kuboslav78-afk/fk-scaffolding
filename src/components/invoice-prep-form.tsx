@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { addMonthsISO } from "@/lib/dates";
+import { addDaysISO } from "@/lib/dates";
 import { formatThousands } from "@/lib/format";
 import { markOrdersPrepSent, sendPrepEmailViaResend } from "@/app/(app)/admin/orders/prep/actions";
 
@@ -31,10 +31,12 @@ export function InvoicePrepForm({
   orders,
   contacts,
   adminName,
+  paymentTermDays,
 }: {
   orders: Order[];
   contacts: Contact[];
   adminName: string;
+  paymentTermDays: number;
 }) {
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [issuedDates, setIssuedDates] = useState<Record<string, string>>(() =>
@@ -49,7 +51,7 @@ export function InvoicePrepForm({
   const [resendResult, setResendResult] = useState<string | null>(null);
 
   const dueDates = Object.fromEntries(
-    orders.map((o) => [o.id, issuedDates[o.id] ? addMonthsISO(issuedDates[o.id], 1) : ""])
+    orders.map((o) => [o.id, issuedDates[o.id] ? addDaysISO(issuedDates[o.id], paymentTermDays) : ""])
   );
 
   const selectedOrders = orders
@@ -143,7 +145,7 @@ export function InvoicePrepForm({
               <th className="pb-2 pr-3">Zákazník</th>
               <th className="pb-2 pr-3">Moja faktúra</th>
               <th className="pb-2 pr-3">Dátum vystavenia</th>
-              <th className="pb-2 pr-3">Splatnosť (+1 mesiac)</th>
+              <th className="pb-2 pr-3">Splatnosť (+{paymentTermDays} dní)</th>
               <th className="pb-2">Stav</th>
             </tr>
           </thead>

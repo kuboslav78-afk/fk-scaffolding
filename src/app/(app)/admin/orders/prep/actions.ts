@@ -5,7 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/get-profile";
 import { getResendClient, RESEND_FROM_EMAIL } from "@/lib/resend";
 import { computeInvoiceAmount } from "@/lib/order-amount";
-import { addMonthsISO } from "@/lib/dates";
+import { addDaysISO } from "@/lib/dates";
+import { getPaymentTermDays } from "@/lib/settings";
 import { formatThousands } from "@/lib/format";
 
 export async function addContact(formData: FormData) {
@@ -32,6 +33,21 @@ export async function deleteContact(id: string) {
 
   revalidatePath("/admin/orders/prep");
   revalidatePath("/admin/orders/invoices");
+}
+
+export async function updatePaymentTermDays(formData: FormData) {
+  const requester = await getProfile();
+  if (requester?.role !== "admin") return;
+
+  const days = Number(formData.get("days"));
+  if (!Number.isInteger(days) || days < 1 || days > 365) return;
+
+  const supabase = await createClient();
+  await supabase
+    .from("app_settings")
+    .upsert({ key: "payment_term_days", value: String(days), updated_at: new Date().toISOString() });
+
+  revalidatePath("/admin/orders", "layout");
 }
 
 export async function markOrdersPrepSent(orderIds: string[]) {
@@ -71,6 +87,7 @@ export async function sendPrepEmailViaResend(
   if (!orderIds.length) return { ok: false, error: "Nič nie je vybrané." };
 
   const supabase = await createClient();
+  const paymentTermDays = await getPaymentTermDays();
   const [{ data: orders }, { data: contacts }] = await Promise.all([
     supabase
       .from("orders")
@@ -91,7 +108,7 @@ export async function sendPrepEmailViaResend(
     .map((o) => {
       sentOrderIds.push(o.id);
       const issuedDate = issuedDates[o.id];
-      const dueDate = addMonthsISO(issuedDate, 1);
+      const dueDate = addDaysISO(issuedDate, paymentTermDays);
       const amount = computeInvoiceAmount(o) ?? 0;
       return {
         ref: labels[o.id] || "-",

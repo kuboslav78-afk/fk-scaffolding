@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/get-profile";
 import { InvoiceForm } from "@/components/invoice-form";
+import { getPaymentTermDays } from "@/lib/settings";
 
 export default async function NewInvoicePage() {
   const profile = await getProfile();
@@ -10,6 +11,7 @@ export default async function NewInvoicePage() {
   if (profile.role !== "admin") redirect("/dashboard");
 
   const supabase = await createClient();
+  const paymentTermDays = await getPaymentTermDays();
   const { data: orders } = await supabase
     .from("orders")
     .select("id, order_number, customer_name, price, work_type")
@@ -25,7 +27,7 @@ export default async function NewInvoicePage() {
       </div>
       <h1 className="text-2xl font-semibold text-ink-900">Nová faktúra</h1>
       <div className="card p-5">
-        <InvoiceForm orders={orders ?? []} />
+        <InvoiceForm orders={orders ?? []} paymentTermDays={paymentTermDays} />
       </div>
     </div>
   );

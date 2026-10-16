@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile } from "@/lib/get-profile";
-import { addDaysISO, addMonthsISO } from "@/lib/dates";
+import { addDaysISO } from "@/lib/dates";
+import { getPaymentTermDays } from "@/lib/settings";
 import { parseInvoicePdf } from "@/lib/parse-invoice-pdf";
 
 export type ImportRow = {
@@ -121,11 +122,12 @@ function invoiceSortKey(num: string): number {
  * Faktúry musia mať dátum vystavenia v poradí podľa čísla faktúry — vyššie číslo nesmie
  * mať skorší dátum ako nižšie. Ak by Petrov dátum toto porušil, oficiálny dátum vystavenia
  * sa posunie na deň po predchádzajúcej faktúre; splatnosť sa ale vždy počíta z Petrovho
- * pôvodného dátumu (+1 mesiac), nie z posunutého dátumu vystavenia.
+ * pôvodného dátumu (+ nastavená splatnosť v dňoch), nie z posunutého dátumu vystavenia.
  */
 function computeIssuedAndDueDates(
   rows: ImportRow[],
-  existingInvoices: { invoice_number: string; issued_date: string }[]
+  existingInvoices: { invoice_number: string; issued_date: string }[],
+  paymentTermDays: number
 ) {
   type Anchor = { key: number; issuedDate: string; invoiceNumber: string | null };
 
@@ -166,9 +168,9 @@ function computeIssuedAndDueDates(
       issuedDate = addDaysISO(runningMax, 1);
       dateBumped = true;
     }
-    // Ak vieme skutočný dátum splatnosti priamo z PDF, dôverujeme mu namiesto odhadu +1 mesiac
+    // Ak vieme skutočný dátum splatnosti priamo z PDF, dôverujeme mu namiesto odhadu podľa nastavenej splatnosti
     // (POHODA ho niekedy počíta inak, napr. 23 dní namiesto celého mesiaca).
-    const dueDate = row.pdfDueDate ?? addMonthsISO(peterDate, 1);
+    const dueDate = row.pdfDueDate ?? addDaysISO(peterDate, paymentTermDays);
     byInvoiceNumber.set(item.invoiceNumber, { issuedDate, dueDate, dateBumped });
     if (!runningMax || issuedDate > runningMax) runningMax = issuedDate;
   }
@@ -192,6 +194,7 @@ export async function checkInvoiceImport(rows: ImportRow[]): Promise<CheckedRow[
 
   if (!orderNumbers.length) return [];
 
+  const paymentTermDays = await getPaymentTermDays();
   const [{ data: orders }, { data: existingInvoices }] = await Promise.all([
     supabase.from("orders").select("id, order_number, price, work_type, full_invoice, sites(name, short_name)"),
     supabase.from("invoices").select("invoice_number, issued_date, order_id"),
@@ -201,12 +204,12 @@ export async function checkInvoiceImport(rows: ImportRow[]): Promise<CheckedRow[
   const existingInvoiceOrderPairs = new Set(
     (existingInvoices ?? []).map((i) => `${i.invoice_number}::${i.order_id}`)
   );
-  const dates = computeIssuedAndDueDates(rows, existingInvoices ?? []);
+  const dates = computeIssuedAndDueDates(rows, existingInvoices ?? [], paymentTermDays);
 
   return rows.map((row) => {
     const d = dates.get(row.key) ?? {
       issuedDate: row.peterDate,
-      dueDate: addMonthsISO(row.peterDate, 1),
+      dueDate: addDaysISO(row.peterDate, paymentTermDays),
       dateBumped: false,
     };
     // "Zmluva č." (napr. "545") sú posledné číslice nemeckého Auftrags-Nr (napr. "202600545") —

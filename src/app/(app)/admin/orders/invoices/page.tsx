@@ -6,6 +6,7 @@ import { getProfile } from "@/lib/get-profile";
 import { OrdersSubnav } from "@/components/orders-subnav";
 import { InvoicesTable, type InvoiceGroup } from "@/components/invoices-table";
 import { MONTH_NAMES, parseMonthParam, monthRange } from "@/lib/month";
+import { getPaymentTermDays } from "@/lib/settings";
 
 function contractsLabel(count: number) {
   if (count === 1) return "1 zmluva";
@@ -131,7 +132,9 @@ export default async function InvoicesPage({
         </div>
       </div>
 
-      <InvoicesTable groups={groups} peterEmail={peterContact?.email ?? null} adminName={profile.full_name} />
+      <InvoicesTable groups={groups} peterEmail={peterContact?.email ?? null} adminName={profile.full_name}
+        paymentTermDays={await getPaymentTermDays()}
+      />
     </div>
   );
 }
