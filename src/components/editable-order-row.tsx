@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   updateOrder,
   markPeterInvoiceIssued,
@@ -18,7 +20,7 @@ const WORK_TYPE_LABELS: Record<string, string> = {
   hodiny: "Hodinovka",
 };
 
-const TABLE_COLS = 6;
+const TABLE_COLS = 7;
 
 type Site = { id: string; name: string };
 
@@ -59,9 +61,20 @@ export function EditableOrderRow({
 
   const myInvoiceAmount = computeInvoiceAmount(order);
 
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
+    useSortable({ id: order.id });
+  const sortableStyle = {
+    transform: CSS.Translate.toString(transform),
+    transition,
+    position: isDragging ? ("relative" as const) : undefined,
+    zIndex: isDragging ? 10 : undefined,
+    background: isDragging ? "var(--card)" : undefined,
+    boxShadow: isDragging ? "0 4px 16px rgba(0,0,0,0.5)" : undefined,
+  };
+
   if (editing) {
     return (
-      <tr className="border-b border-ink-100">
+      <tr ref={setNodeRef} style={sortableStyle} className="border-b border-ink-100">
         <td colSpan={TABLE_COLS} className="p-3">
           <form
             action={(formData) => {
@@ -134,9 +147,24 @@ export function EditableOrderRow({
 
   return (
     <tr
+      ref={setNodeRef}
+      style={sortableStyle}
       onClick={() => router.push(`/admin/orders/${order.id}`)}
       className="cursor-pointer border-b border-ink-100 text-sm hover:bg-ink-50"
     >
+      <td className="py-2.5 pr-1" onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          ref={setActivatorNodeRef}
+          {...attributes}
+          {...listeners}
+          aria-label="Presunúť objednávku"
+          title="Potiahni pre zmenu poradia"
+          className="flex h-6 w-5 cursor-grab touch-none items-center justify-center rounded text-ink-400 hover:text-ink-900 active:cursor-grabbing"
+        >
+          ⋮⋮
+        </button>
+      </td>
       <td className="whitespace-nowrap py-2.5 pr-2">
         <span className="inline-flex items-center rounded-md bg-yellow-400/20 px-1.5 py-0.5 font-semibold text-yellow-300">
           {order.order_number ?? "—"}
