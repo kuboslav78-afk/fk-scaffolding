@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ScaffoldDecoration } from "@/components/scaffold-decoration";
@@ -76,6 +77,12 @@ export default function LoginPage() {
         </div>
 
         {error && <p className="text-sm text-red-400">{error}</p>}
+
+        <div className="text-right">
+          <Link href="/forgot-password" className="text-xs text-[#9a9186] hover:text-[#f0a23a]">
+            Zabudnuté heslo?
+          </Link>
+        </div>
 
         <button
           type="submit"

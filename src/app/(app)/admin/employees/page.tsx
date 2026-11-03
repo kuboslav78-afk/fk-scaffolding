@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile } from "@/lib/get-profile";
 import { CreateEmployeeForm } from "@/components/create-employee-form";
+import { ResetPasswordButton } from "@/components/reset-password-button";
 import { RoleSelectForm } from "@/components/role-select-form";
 import { setEmployeeActive } from "./actions";
 
@@ -48,7 +49,8 @@ export default async function EmployeesPage() {
                   <p className="truncate text-ink-500">{e.email}</p>
                   {!e.active && <p className="badge-danger mt-1">deaktivovaný</p>}
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                  <ResetPasswordButton employeeId={e.id} />
                   <RoleSelectForm employeeId={e.id} role={e.role} disabled={e.id === profile.id} />
                   <form action={setEmployeeActive.bind(null, e.id, !e.active)}>
                     <button
