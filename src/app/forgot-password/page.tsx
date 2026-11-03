@@ -7,7 +7,6 @@ import { createClient } from "@/lib/supabase/client";
 import { CosmicDustBackground } from "@/components/cosmic-dust-background";
 
 function ForgotPasswordForm() {
-  const supabase = createClient();
   const expired = useSearchParams().get("expired");
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
@@ -15,6 +14,7 @@ function ForgotPasswordForm() {
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
+    const supabase = createClient();
     e.preventDefault();
     setLoading(true);
     setError(null);

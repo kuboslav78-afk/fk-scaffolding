@@ -10,13 +10,13 @@ import { CosmicDustBackground } from "@/components/cosmic-dust-background";
 
 export default function LoginPage() {
   const router = useRouter();
-  const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
+    const supabase = createClient();
     e.preventDefault();
     setLoading(true);
     setError(null);

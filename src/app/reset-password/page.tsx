@@ -7,13 +7,13 @@ import { CosmicDustBackground } from "@/components/cosmic-dust-background";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
-  const supabase = createClient();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
+    const supabase = createClient();
     e.preventDefault();
     setError(null);
 
