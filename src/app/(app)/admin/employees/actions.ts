@@ -42,6 +42,25 @@ export async function createEmployee(formData: FormData) {
   return { tempPassword, email };
 }
 
+export async function resetEmployeePassword(employeeId: string) {
+  const requester = await getProfile();
+  if (requester?.role !== "admin") return { error: "Nemáš oprávnenie." };
+  if (!employeeId) return { error: "Chýba zamestnanec." };
+
+  const admin = createAdminClient();
+  const tempPassword = generateTempPassword();
+
+  const { data, error } = await admin.auth.admin.updateUserById(employeeId, {
+    password: tempPassword,
+  });
+
+  if (error || !data.user) {
+    return { error: error?.message ?? "Reset hesla zlyhal." };
+  }
+
+  return { tempPassword, email: data.user.email ?? "" };
+}
+
 export async function updateEmployeeRole(formData: FormData) {
   const requester = await getProfile();
   if (requester?.role !== "admin") return;

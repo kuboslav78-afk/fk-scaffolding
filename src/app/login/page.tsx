@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ScaffoldDecoration } from "@/components/scaffold-decoration";
@@ -9,13 +10,13 @@ import { CosmicDustBackground } from "@/components/cosmic-dust-background";
 
 export default function LoginPage() {
   const router = useRouter();
-  const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
+    const supabase = createClient();
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -76,6 +77,12 @@ export default function LoginPage() {
         </div>
 
         {error && <p className="text-sm text-red-400">{error}</p>}
+
+        <div className="text-right">
+          <Link href="/forgot-password" className="text-xs text-[#9a9186] hover:text-[#f0a23a]">
+            Zabudnuté heslo?
+          </Link>
+        </div>
 
         <button
           type="submit"
