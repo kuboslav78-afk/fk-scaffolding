@@ -6,8 +6,8 @@ import { InvoicePrepForm } from "@/components/invoice-prep-form";
 import { DeleteContactButton } from "@/components/delete-contact-button";
 import { isoWeekNumber } from "@/lib/dates";
 import { computeInvoiceAmount } from "@/lib/order-amount";
-import { getPaymentTermDays } from "@/lib/settings";
-import { addContact, updatePaymentTermDays } from "./actions";
+import { getInvoiceExtraRecipient, getPaymentTermDays } from "@/lib/settings";
+import { addContact, updateInvoiceExtraRecipient, updatePaymentTermDays } from "./actions";
 
 export default async function InvoicePrepPage() {
   const profile = await getProfile();
@@ -16,6 +16,7 @@ export default async function InvoicePrepPage() {
 
   const supabase = await createClient();
   const paymentTermDays = await getPaymentTermDays();
+  const extraRecipient = await getInvoiceExtraRecipient();
 
   const [{ data: orders }, { data: invoices }, { data: contacts }] = await Promise.all([
     supabase
@@ -89,6 +90,25 @@ export default async function InvoicePrepPage() {
             className="input w-24"
           />
           <span className="text-sm text-ink-700">dní</span>
+          <button type="submit" className="btn-primary btn-sm">
+            Uložiť
+          </button>
+        </form>
+      </div>
+
+      <div className="card space-y-3 p-5">
+        <h2 className="font-semibold text-ink-900">Kópia faktúr</h2>
+        <p className="text-sm text-ink-500">
+          Faktúry odosielané Petrovi cez Resend sa pošlú v kópii aj na tento email. Prázdne pole = bez kópie.
+        </p>
+        <form action={updateInvoiceExtraRecipient} className="flex flex-wrap items-center gap-2">
+          <input
+            type="email"
+            name="email"
+            defaultValue={extraRecipient}
+            placeholder="email@example.sk"
+            className="input min-w-[220px] flex-1"
+          />
           <button type="submit" className="btn-primary btn-sm">
             Uložiť
           </button>

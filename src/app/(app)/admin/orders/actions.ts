@@ -8,6 +8,7 @@ import { getProfile } from "@/lib/get-profile";
 import { parseOrderPdf } from "@/lib/parse-order-pdf";
 import { getResendClient, RESEND_FROM_EMAIL } from "@/lib/resend";
 import { formatThousands } from "@/lib/format";
+import { getInvoiceExtraRecipient } from "@/lib/settings";
 
 async function uploadOrderPdf(orderId: string, pdf: File) {
   const admin = createAdminClient();
@@ -218,9 +219,14 @@ export async function sendGroupedInvoicesToPeter(
     return { ok: false, error: "Žiadna z vybraných faktúr nemá archivované PDF." };
   }
 
+  const extraRecipient = await getInvoiceExtraRecipient();
+
   const { error: sendError } = await resend.emails.send({
     from: RESEND_FROM_EMAIL,
     to: peter.email,
+    ...(extraRecipient && extraRecipient.toLowerCase() !== peter.email.toLowerCase()
+      ? { cc: extraRecipient }
+      : {}),
     subject: attachments.length === 1 ? `Faktúra ${[...groups.keys()][0]}` : `Faktúry (${attachments.length})`,
     text: [
       "Dobrý deň,",

@@ -50,6 +50,21 @@ export async function updatePaymentTermDays(formData: FormData) {
   revalidatePath("/admin/orders", "layout");
 }
 
+export async function updateInvoiceExtraRecipient(formData: FormData) {
+  const requester = await getProfile();
+  if (requester?.role !== "admin") return;
+
+  const email = String(formData.get("email") ?? "").trim();
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+
+  const supabase = await createClient();
+  await supabase
+    .from("app_settings")
+    .upsert({ key: "invoice_extra_recipient", value: email, updated_at: new Date().toISOString() });
+
+  revalidatePath("/admin/orders", "layout");
+}
+
 export async function markOrdersPrepSent(orderIds: string[]) {
   const requester = await getProfile();
   if (requester?.role !== "admin") return;
