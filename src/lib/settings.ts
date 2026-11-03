@@ -15,3 +15,15 @@ export async function getPaymentTermDays(): Promise<number> {
   const days = Number(data?.value);
   return Number.isInteger(days) && days > 0 ? days : DEFAULT_PAYMENT_TERM_DAYS;
 }
+
+/** Ďalší príjemca (kópia) faktúr, ktoré sa posielajú Petrovi; prázdny reťazec = žiadny. */
+export async function getInvoiceExtraRecipient(): Promise<string> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", "invoice_extra_recipient")
+    .maybeSingle();
+
+  return data?.value?.trim() ?? "";
+}
