@@ -361,6 +361,19 @@ export async function deleteInvoiceGroup(ids: string[]) {
   revalidatePath("/admin/orders/invoices");
 }
 
+export async function reorderOrders(orderIds: string[]) {
+  const requester = await getProfile();
+  if (requester?.role !== "admin") return;
+  if (!orderIds.length) return;
+
+  const supabase = await createClient();
+  await Promise.all(
+    orderIds.map((id, index) => supabase.from("orders").update({ sort_order: index + 1 }).eq("id", id))
+  );
+
+  revalidatePath("/admin/orders");
+}
+
 export async function deleteOrder(orderId: string) {
   const requester = await getProfile();
   if (requester?.role !== "admin") return;

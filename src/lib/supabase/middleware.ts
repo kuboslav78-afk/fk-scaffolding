@@ -23,9 +23,10 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims() overí JWT lokálne (bez sieťového volania na Supabase Auth, ak projekt používa
+  // asymetrické signing keys); getUser() by pri každom requeste čakal na round-trip.
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const user = claimsData?.claims ?? null;
 
   const path = request.nextUrl.pathname;
   const isAuthRoute = path.startsWith("/login");

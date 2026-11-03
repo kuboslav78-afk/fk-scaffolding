@@ -13,28 +13,24 @@ export default async function HodinyPage() {
 
   const supabase = await createClient();
 
-  const { data: sites } = await supabase.from("sites").select("id, name").order("name");
-
-  const { data: foremanSites } = await supabase
-    .from("sites")
-    .select("id, name")
-    .eq("foreman_id", profile.id);
+  const [{ data: sites }, { data: foremanSites }, { data: hours }, { data: diaryEntries }] = await Promise.all([
+    supabase.from("sites").select("id, name").order("name"),
+    supabase.from("sites").select("id, name").eq("foreman_id", profile.id),
+    supabase
+      .from("work_hours")
+      .select("id, work_date, hours_worked, description, approved, site_id, sites(name)")
+      .eq("employee_id", profile.id)
+      .order("work_date", { ascending: false })
+      .limit(10),
+    supabase
+      .from("site_diary_entries")
+      .select("id, entry_date, content, site_id, sites(name)")
+      .eq("employee_id", profile.id)
+      .order("entry_date", { ascending: false })
+      .limit(10),
+  ]);
 
   const isForemanSomewhere = !!foremanSites?.length;
-
-  const { data: hours } = await supabase
-    .from("work_hours")
-    .select("id, work_date, hours_worked, description, approved, site_id, sites(name)")
-    .eq("employee_id", profile.id)
-    .order("work_date", { ascending: false })
-    .limit(10);
-
-  const { data: diaryEntries } = await supabase
-    .from("site_diary_entries")
-    .select("id, entry_date, content, site_id, sites(name)")
-    .eq("employee_id", profile.id)
-    .order("entry_date", { ascending: false })
-    .limit(10);
 
   let pendingApprovals: {
     id: string;

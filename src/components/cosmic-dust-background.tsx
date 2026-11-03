@@ -9,6 +9,9 @@ import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import { GammaCorrectionShader } from "three/examples/jsm/shaders/GammaCorrectionShader.js";
 import { CopyShader } from "three/examples/jsm/shaders/CopyShader.js";
 
+// Bloom na retine displejoch (dpr 2–3) je 4–9× viac pixelov; 1.25 je vizuálne takmer rovnaké.
+const MAX_PIXEL_RATIO = 1.25;
+
 const LAYERS = { NONE: 0, TORUS_SCENE: 1, BLOOM_SCENE: 2, ENTIRE_SCENE: 3 };
 
 function hexToVec3(hex: string) {
@@ -95,7 +98,7 @@ export function CosmicDustBackground() {
     if (!canvas) return;
 
     const renderer = new THREE.WebGL1Renderer({ canvas, antialias: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.VSMShadowMap;
 
@@ -168,7 +171,7 @@ export function CosmicDustBackground() {
       iShift: { value: new THREE.Vector3() },
       iAlpha: { value: 0 },
       iAnimation: { value: new THREE.Vector3(0, 0, 0) },
-      iResolution: { value: { x: window.innerWidth * window.devicePixelRatio, y: window.innerHeight * window.devicePixelRatio } },
+      iResolution: { value: { x: window.innerWidth * Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO), y: window.innerHeight * Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO) } },
       uDepth: { value: 3.7 },
       uCool: { value: hexToVec3("#b3401f") },
       uWarm: { value: hexToVec3("#ffc46b") },
@@ -195,7 +198,7 @@ export function CosmicDustBackground() {
     function resize() {
       const w = window.innerWidth;
       const h = window.innerHeight;
-      const dpr = window.devicePixelRatio;
+      const dpr = Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
 
       renderer.setPixelRatio(dpr);
       renderer.setSize(w, h, false);

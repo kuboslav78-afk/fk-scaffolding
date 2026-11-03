@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile } from "@/lib/get-profile";
 import { EditableOrderRow } from "@/components/editable-order-row";
 import { OrdersSubnav } from "@/components/orders-subnav";
+import { SortableOrdersBody } from "@/components/sortable-orders-body";
 import { computeInvoiceAmount } from "@/lib/order-amount";
 import { formatThousands } from "@/lib/format";
 
@@ -65,6 +66,7 @@ export default async function OrdersPage({
         "id, order_number, customer_name, work_type, order_date, display_month, start_date, handover_date, price, contribution_amount, hours, hourly_rate, peter_invoice_issued, peter_invoice_date, full_invoice, note, site_id, pdf_path, sites(name, short_name)"
       )
       .eq("display_month", monthParam)
+      .order("sort_order", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: true }),
   ]);
 
@@ -121,8 +123,9 @@ export default async function OrdersPage({
       </div>
 
       <div className="card overflow-x-auto p-5">
-        <table className="w-full min-w-[760px] table-fixed border-collapse">
+        <table className="w-full min-w-[790px] table-fixed border-collapse">
           <colgroup>
+            <col className="w-[28px]" />
             <col className="w-[120px]" />
             <col className="w-[140px]" />
             <col className="w-[110px]" />
@@ -132,6 +135,7 @@ export default async function OrdersPage({
           </colgroup>
           <thead>
             <tr className="border-b border-ink-100 text-left text-xs font-medium uppercase tracking-wide text-ink-500">
+              <th className="pb-2 pr-1"></th>
               <th className="pb-2 pr-2">Číslo</th>
               <th className="pb-2 pr-2">Stavba</th>
               <th className="pb-2 pr-2">Termín ukončenia</th>
@@ -140,8 +144,11 @@ export default async function OrdersPage({
               <th className="pb-2">Akcie</th>
             </tr>
           </thead>
-          <tbody>
-            {monthOrders?.map((o) => (
+          <SortableOrdersBody
+            key={(monthOrders ?? []).map((o) => o.id).join(",")}
+            items={(monthOrders ?? []).map((o) => ({
+              id: o.id,
+              row: (
               <EditableOrderRow
                 key={o.id}
                 order={{
@@ -168,8 +175,9 @@ export default async function OrdersPage({
                 sites={sites ?? []}
                 pdfUrl={pdfUrlByOrder.get(o.id) ?? null}
               />
-            ))}
-          </tbody>
+              ),
+            }))}
+          />
         </table>
         {!monthOrders?.length && (
           <p className="py-4 text-sm text-ink-400">Žiadne objednávky za tento mesiac.</p>
