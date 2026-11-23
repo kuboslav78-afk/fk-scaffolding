@@ -9,6 +9,7 @@ import {
   markPeterInvoiceIssued,
   unmarkPeterInvoiceIssued,
 } from "@/app/(app)/admin/orders/actions";
+import { InvoicePdfPopup } from "@/components/invoice-pdf-popup";
 import { DeleteOrderButton } from "@/components/delete-order-button";
 import { todayISO, formatDateShort } from "@/lib/dates";
 import { computeInvoiceAmount } from "@/lib/order-amount";
@@ -54,7 +55,7 @@ export function EditableOrderRow({
   order: Order;
   sites: Site[];
   pdfUrl: string | null;
-  invoice: { number: string; sent: boolean } | null;
+  invoice: { id: string; number: string; sent: boolean } | null;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -217,17 +218,9 @@ export function EditableOrderRow({
           </span>
         )}
       </td>
-      <td className="whitespace-nowrap py-2.5 pr-2">
+      <td className="whitespace-nowrap py-2.5 pr-2" onClick={(e) => e.stopPropagation()}>
         {invoice ? (
-          invoice.sent ? (
-            <span className="badge-success" title="Faktúra odoslaná Petrovi">
-              ✓ {invoice.number}
-            </span>
-          ) : (
-            <span className="badge-neutral" title="Faktúra vystavená, ešte neodoslaná Petrovi">
-              {invoice.number}
-            </span>
-          )
+          <InvoicePdfPopup invoiceId={invoice.id} invoiceNumber={invoice.number} sent={invoice.sent} />
         ) : (
           <span className="text-ink-400">—</span>
         )}

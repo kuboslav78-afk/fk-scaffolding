@@ -73,19 +73,19 @@ export default async function OrdersPage({
   const monthTotal = (monthOrders ?? []).reduce((sum, o) => sum + (computeInvoiceAmount(o) ?? 0), 0);
 
   // Faktúra k objednávke (číslo + či už bola odoslaná Petrovi) — zobrazí sa v stĺpci „Faktúra".
-  const invoiceByOrder = new Map<string, { number: string; sent: boolean }>();
+  const invoiceByOrder = new Map<string, { id: string; number: string; sent: boolean }>();
   const monthOrderIds = (monthOrders ?? []).map((o) => o.id);
   if (monthOrderIds.length) {
     const { data: monthInvoices } = await supabase
       .from("invoices")
-      .select("order_id, invoice_number, sent")
+      .select("id, order_id, invoice_number, sent")
       .in("order_id", monthOrderIds);
     for (const inv of monthInvoices ?? []) {
       if (!inv.order_id) continue;
       const prev = invoiceByOrder.get(inv.order_id);
       // ak je k objednávke viac faktúr, uprednostni odoslanú
       if (!prev || (inv.sent && !prev.sent)) {
-        invoiceByOrder.set(inv.order_id, { number: inv.invoice_number, sent: !!inv.sent });
+        invoiceByOrder.set(inv.order_id, { id: inv.id, number: inv.invoice_number, sent: !!inv.sent });
       }
     }
   }

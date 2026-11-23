@@ -368,6 +368,24 @@ export async function deleteInvoiceGroup(ids: string[]) {
   revalidatePath("/admin/orders/invoices");
 }
 
+/** Podpísaná URL na PDF faktúry na zobrazenie v okne (bez `download`, aby sa dalo vložiť do iframe). */
+export async function getInvoicePdfPreviewUrl(
+  invoiceId: string
+): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  const requester = await getProfile();
+  if (requester?.role !== "admin") return { ok: false, error: "Nemáš oprávnenie." };
+
+  const supabase = await createClient();
+  const { data: invoice } = await supabase.from("invoices").select("pdf_path").eq("id", invoiceId).single();
+  if (!invoice?.pdf_path) return { ok: false, error: "K tejto faktúre nie je nahraté PDF." };
+
+  const admin = createAdminClient();
+  const { data, error } = await admin.storage.from("invoice-pdfs").createSignedUrl(invoice.pdf_path, 600);
+  if (error || !data?.signedUrl) return { ok: false, error: "PDF sa nepodarilo načítať." };
+
+  return { ok: true, url: data.signedUrl };
+}
+
 export async function reorderOrders(orderIds: string[]) {
   const requester = await getProfile();
   if (requester?.role !== "admin") return;
