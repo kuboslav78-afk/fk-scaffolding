@@ -20,7 +20,7 @@ const WORK_TYPE_LABELS: Record<string, string> = {
   hodiny: "Hodinovka",
 };
 
-const TABLE_COLS = 7;
+const TABLE_COLS = 8;
 
 type Site = { id: string; name: string };
 
@@ -49,10 +49,12 @@ export function EditableOrderRow({
   order,
   sites,
   pdfUrl,
+  invoice,
 }: {
   order: Order;
   sites: Site[];
   pdfUrl: string | null;
+  invoice: { number: string; sent: boolean } | null;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -213,6 +215,21 @@ export function EditableOrderRow({
               označiť
             </button>
           </span>
+        )}
+      </td>
+      <td className="whitespace-nowrap py-2.5 pr-2">
+        {invoice ? (
+          invoice.sent ? (
+            <span className="badge-success" title="Faktúra odoslaná Petrovi">
+              ✓ {invoice.number}
+            </span>
+          ) : (
+            <span className="badge-neutral" title="Faktúra vystavená, ešte neodoslaná Petrovi">
+              {invoice.number}
+            </span>
+          )
+        ) : (
+          <span className="text-ink-400">—</span>
         )}
       </td>
       <td className="whitespace-nowrap py-2.5" onClick={(e) => e.stopPropagation()}>

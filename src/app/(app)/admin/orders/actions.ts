@@ -248,6 +248,7 @@ export async function sendGroupedInvoicesToPeter(
   if (sendError) return { ok: false, error: sendError.message };
 
   await supabase.from("invoices").update({ sent: true }).in("id", allIds);
+  revalidatePath("/admin/orders");
   revalidatePath("/admin/orders/invoices");
   return { ok: true, sent: attachments.length };
 }

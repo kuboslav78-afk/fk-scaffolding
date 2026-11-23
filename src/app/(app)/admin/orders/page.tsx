@@ -72,6 +72,24 @@ export default async function OrdersPage({
 
   const monthTotal = (monthOrders ?? []).reduce((sum, o) => sum + (computeInvoiceAmount(o) ?? 0), 0);
 
+  // Faktúra k objednávke (číslo + či už bola odoslaná Petrovi) — zobrazí sa v stĺpci „Faktúra".
+  const invoiceByOrder = new Map<string, { number: string; sent: boolean }>();
+  const monthOrderIds = (monthOrders ?? []).map((o) => o.id);
+  if (monthOrderIds.length) {
+    const { data: monthInvoices } = await supabase
+      .from("invoices")
+      .select("order_id, invoice_number, sent")
+      .in("order_id", monthOrderIds);
+    for (const inv of monthInvoices ?? []) {
+      if (!inv.order_id) continue;
+      const prev = invoiceByOrder.get(inv.order_id);
+      // ak je k objednávke viac faktúr, uprednostni odoslanú
+      if (!prev || (inv.sent && !prev.sent)) {
+        invoiceByOrder.set(inv.order_id, { number: inv.invoice_number, sent: !!inv.sent });
+      }
+    }
+  }
+
   const pdfUrlByOrder = new Map<string, string>();
   const ordersWithPdf = (monthOrders ?? []).filter((o) => o.pdf_path);
   if (ordersWithPdf.length) {
@@ -123,7 +141,7 @@ export default async function OrdersPage({
       </div>
 
       <div className="card overflow-x-auto p-5">
-        <table className="w-full min-w-[790px] table-fixed border-collapse">
+        <table className="w-full min-w-[900px] table-fixed border-collapse">
           <colgroup>
             <col className="w-[28px]" />
             <col className="w-[120px]" />
@@ -131,6 +149,7 @@ export default async function OrdersPage({
             <col className="w-[110px]" />
             <col className="w-[100px]" />
             <col className="w-[180px]" />
+            <col className="w-[110px]" />
             <col />
           </colgroup>
           <thead>
@@ -141,6 +160,7 @@ export default async function OrdersPage({
               <th className="pb-2 pr-2">Termín ukončenia</th>
               <th className="pb-2 pr-2">Moja faktúra</th>
               <th className="pb-2 pr-2">Dátum vystavenia</th>
+              <th className="pb-2 pr-2">Faktúra</th>
               <th className="pb-2">Akcie</th>
             </tr>
           </thead>
@@ -174,6 +194,7 @@ export default async function OrdersPage({
                 }}
                 sites={sites ?? []}
                 pdfUrl={pdfUrlByOrder.get(o.id) ?? null}
+                invoice={invoiceByOrder.get(o.id) ?? null}
               />
               ),
             }))}
