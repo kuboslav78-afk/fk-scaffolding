@@ -12,7 +12,7 @@ export default async function ImportInvoicesPage() {
   const supabase = await createClient();
   const { data: orders } = await supabase
     .from("orders")
-    .select("id, order_number, customer_name, sites(name, short_name)")
+    .select("id, order_number, customer_name, display_month, sites(name, short_name)")
     .order("order_date", { ascending: false })
     .limit(300);
 

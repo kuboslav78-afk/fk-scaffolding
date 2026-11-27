@@ -17,6 +17,8 @@ export type ImportRow = {
   pdfPath: string | null;
   /** Skutočný dátum splatnosti vytlačený na faktúre — ak je, použije sa namiesto dopočítaného +1 mesiac. */
   pdfDueDate: string | null;
+  /** Ručne vybraná objednávka (keď číslo sedí na viac objednávok) — má prednosť pred párovaním podľa čísla. */
+  forcedOrderId?: string | null;
 };
 
 export type ParsedInvoiceRow = {
@@ -108,6 +110,8 @@ export type CheckedRow = ImportRow & {
   orderId: string | null;
   expectedAmount: number | null;
   message: string | null;
+  /** Pri stave "ambiguous": objednávky, z ktorých si používateľ vyberie. */
+  candidates?: { id: string; label: string }[];
   issuedDate: string;
   dueDate: string;
   dateBumped: boolean;
@@ -196,7 +200,9 @@ export async function checkInvoiceImport(rows: ImportRow[]): Promise<CheckedRow[
 
   const paymentTermDays = await getPaymentTermDays();
   const [{ data: orders }, { data: existingInvoices }] = await Promise.all([
-    supabase.from("orders").select("id, order_number, price, work_type, full_invoice, sites(name, short_name)"),
+    supabase
+      .from("orders")
+      .select("id, order_number, customer_name, display_month, price, work_type, full_invoice, sites(name, short_name)"),
     supabase.from("invoices").select("invoice_number, issued_date, order_id"),
   ]);
 
@@ -215,12 +221,14 @@ export async function checkInvoiceImport(rows: ImportRow[]): Promise<CheckedRow[
     // "Zmluva č." (napr. "545") sú posledné číslice nemeckého Auftrags-Nr (napr. "202600545") —
     // párujeme cez zhodu konca čísla, nie presnú zhodu, aby stačilo zadať len krátku referenciu.
     const ref = row.orderNumber.trim();
-    let matches = (orders ?? []).filter((o) => o.order_number && o.order_number.endsWith(ref));
+    let matches = row.forcedOrderId
+      ? (orders ?? []).filter((o) => o.id === row.forcedOrderId)
+      : (orders ?? []).filter((o) => o.order_number && o.order_number.endsWith(ref));
 
     // Hodinovka nemá číslo objednávky (Peter jej nedáva Auftrags-Nr) — ak sa nenašlo nič cez
     // číslo, skús napárovať podľa názvu stavby (presne to, čo z PDF vytiahne parser aj to,
     // čo sa predvyplní do "Zmluva č." pre riadky bez Z-XXX referencie).
-    if (matches.length === 0) {
+    if (matches.length === 0 && !row.forcedOrderId) {
       const refLower = ref.toLowerCase();
       matches = (orders ?? []).filter((o) => {
         if (o.order_number) return false;
@@ -248,7 +256,16 @@ export async function checkInvoiceImport(rows: ImportRow[]): Promise<CheckedRow[
         status: "ambiguous" as const,
         orderId: null,
         expectedAmount: null,
-        message: `Viacero objednávok končí na "${ref}" — zadaj celé číslo objednávky`,
+        message: `Viacero objednávok (${matches.length}) sedí na "${ref}" — vyber, ku ktorej patrí`,
+        candidates: matches.map((o) => {
+          // @ts-expect-error supabase join shape
+          const site: string = o.sites?.short_name || o.sites?.name || "bez stavby";
+          const type = o.work_type === "hodiny" ? "hodinovka" : o.work_type === "demontaz" ? "demontáž" : o.work_type === "montaz" ? "montáž" : "";
+          return {
+            id: o.id,
+            label: [o.order_number, o.customer_name, site, type, o.display_month].filter(Boolean).join(" · "),
+          };
+        }),
       };
     }
 

@@ -14,12 +14,20 @@ type PickerOrder = {
   id: string;
   order_number: string | null;
   customer_name: string | null;
+  display_month: string | null;
   sites: { name: string | null; short_name: string | null }[] | null;
 };
 
 function orderRef(o: PickerOrder): string {
   const site = o.sites?.[0];
   return o.order_number ?? site?.short_name ?? site?.name ?? "";
+}
+
+function orderLabel(o: PickerOrder): string {
+  const site = o.sites?.[0];
+  return [orderRef(o) || "—", o.customer_name ?? "bez zákazníka", site?.short_name ?? site?.name, o.display_month]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 function emptyRow(key: string): ImportRow {
@@ -60,6 +68,16 @@ export function ImportInvoicesForm({ orders }: { orders: PickerOrder[] }) {
   function updateRow(key: string, patch: Partial<ImportRow>) {
     setChecked((cs) => (cs ? cs.filter((c) => c.key !== key) : cs));
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  }
+
+  /** Ručný výber objednávky (aj pri viacerých zhodách) — riadok sa hneď znova skontroluje. */
+  function pickOrder(row: ImportRow, orderId: string, orderNumber?: string) {
+    const updated: ImportRow = { ...row, forcedOrderId: orderId, ...(orderNumber ? { orderNumber } : {}) };
+    setChecked((cs) => (cs ? cs.filter((c) => c.key !== row.key) : cs));
+    setRows((rs) => rs.map((r) => (r.key === row.key ? updated : r)));
+    startTransition(() => {
+      checkAndAutoCommit([updated]);
+    });
   }
 
   function addRow() {
@@ -218,7 +236,7 @@ export function ImportInvoicesForm({ orders }: { orders: PickerOrder[] }) {
                     <input
                       type="text"
                       value={row.orderNumber}
-                      onChange={(e) => updateRow(row.key, { orderNumber: e.target.value })}
+                      onChange={(e) => updateRow(row.key, { orderNumber: e.target.value, forcedOrderId: null })}
                       placeholder="napr. 545"
                       className="input w-28"
                     />
@@ -228,14 +246,14 @@ export function ImportInvoicesForm({ orders }: { orders: PickerOrder[] }) {
                         value=""
                         onChange={(e) => {
                           const order = orders.find((o) => o.id === e.target.value);
-                          if (order) updateRow(row.key, { orderNumber: orderRef(order) });
+                          if (order) pickOrder(row, order.id, orderRef(order));
                         }}
                         className="input mt-1 w-40 text-xs"
                       >
                         <option value="">Priradiť k objednávke ručne…</option>
                         {orders.map((o) => (
                           <option key={o.id} value={o.id}>
-                            {orderRef(o) || "—"} · {o.customer_name ?? "bez zákazníka"}
+                            {orderLabel(o)}
                           </option>
                         ))}
                       </select>
@@ -297,6 +315,20 @@ export function ImportInvoicesForm({ orders }: { orders: PickerOrder[] }) {
                           </span>
                           {rowChecked.message && (
                             <p className="mt-1 text-xs text-ink-400">{rowChecked.message}</p>
+                          )}
+                          {rowChecked.status === "ambiguous" && rowChecked.candidates && (
+                            <select
+                              value=""
+                              onChange={(e) => e.target.value && pickOrder(row, e.target.value)}
+                              className="input mt-1 w-64 text-xs"
+                            >
+                              <option value="">Vybrať objednávku…</option>
+                              {rowChecked.candidates.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                  {c.label}
+                                </option>
+                              ))}
+                            </select>
                           )}
                         </div>
                       ) : (

@@ -46,22 +46,6 @@ export async function createOrder(formData: FormData): Promise<{ error: string }
 
   const supabase = await createClient();
 
-  // Číslo objednávky musí byť unikátne — skontrolujeme ešte pred vytvorením stavby/objednávky,
-  // aby sa pri chybe nič nevytvorilo a používateľ dostal jasnú správu.
-  const orderNumber = String(formData.get("order_number") ?? "").trim();
-  if (orderNumber) {
-    const { data: existing } = await supabase
-      .from("orders")
-      .select("display_month")
-      .eq("order_number", orderNumber)
-      .maybeSingle();
-    if (existing) {
-      return {
-        error: `Objednávka s číslom ${orderNumber} už existuje (mesiac ${existing.display_month}). Použi iné číslo.`,
-      };
-    }
-  }
-
   let siteId = String(formData.get("site_id") ?? "");
   const newSiteName = String(formData.get("new_site_name") ?? "").trim();
 
