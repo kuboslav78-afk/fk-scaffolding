@@ -40,11 +40,27 @@ export async function parseOrderPdfAction(formData: FormData) {
   }
 }
 
-export async function createOrder(formData: FormData) {
+export async function createOrder(formData: FormData): Promise<{ error: string } | undefined> {
   const requester = await getProfile();
-  if (requester?.role !== "admin") return;
+  if (requester?.role !== "admin") return { error: "Nemáš oprávnenie." };
 
   const supabase = await createClient();
+
+  // Číslo objednávky musí byť unikátne — skontrolujeme ešte pred vytvorením stavby/objednávky,
+  // aby sa pri chybe nič nevytvorilo a používateľ dostal jasnú správu.
+  const orderNumber = String(formData.get("order_number") ?? "").trim();
+  if (orderNumber) {
+    const { data: existing } = await supabase
+      .from("orders")
+      .select("display_month")
+      .eq("order_number", orderNumber)
+      .maybeSingle();
+    if (existing) {
+      return {
+        error: `Objednávka s číslom ${orderNumber} už existuje (mesiac ${existing.display_month}). Použi iné číslo.`,
+      };
+    }
+  }
 
   let siteId = String(formData.get("site_id") ?? "");
   const newSiteName = String(formData.get("new_site_name") ?? "").trim();
@@ -90,12 +106,13 @@ export async function createOrder(formData: FormData) {
     .select("id")
     .single();
 
-  if (insertError) {
+  if (insertError || !inserted) {
     console.error("createOrder insert failed:", insertError);
+    return { error: `Objednávku sa nepodarilo uložiť: ${insertError?.message ?? "neznáma chyba"}` };
   }
 
   const pdf = formData.get("pdf");
-  if (inserted && pdf instanceof File && pdf.size > 0) {
+  if (pdf instanceof File && pdf.size > 0) {
     await uploadOrderPdf(inserted.id, pdf);
   }
 

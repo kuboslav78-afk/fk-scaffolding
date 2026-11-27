@@ -15,6 +15,7 @@ export function OrderForm({ sites }: { sites: Site[] }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
   const [parseError, setParseError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [orderNumber, setOrderNumber] = useState("");
   const [customerName, setCustomerName] = useState("");
@@ -88,7 +89,20 @@ export function OrderForm({ sites }: { sites: Site[] }) {
   }
 
   return (
-    <form ref={formRef} action={createOrder} className="space-y-3">
+    <form
+      ref={formRef}
+      onSubmit={(e) => {
+        // bez form action, aby sa pri chybe formulár nevynuloval a údaje zostali vyplnené
+        e.preventDefault();
+        setSubmitError(null);
+        const formData = new FormData(e.currentTarget);
+        startTransition(async () => {
+          const res = await createOrder(formData);
+          if (res?.error) setSubmitError(res.error);
+        });
+      }}
+      className="space-y-3"
+    >
       <div>
         <label className="label">Nahrať objednávku (PDF) — auto-vyplní polia</label>
         <input
@@ -351,11 +365,14 @@ export function OrderForm({ sites }: { sites: Site[] }) {
         className="input"
       />
 
-      <button
-        type="submit"
-        className="btn-primary"
-      >
-        Vytvoriť objednávku
+      {submitError && (
+        <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400" role="alert">
+          {submitError}
+        </p>
+      )}
+
+      <button type="submit" disabled={isPending} className="btn-primary">
+        {isPending ? "Ukladám…" : "Vytvoriť objednávku"}
       </button>
     </form>
   );
